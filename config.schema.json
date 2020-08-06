@@ -1,0 +1,37 @@
+{
+  "pluginAlias": "FordPass",
+  "pluginType": "platform",
+  "singular": true,
+  "schema": {
+    "username": {
+      "title": "FordPass Username",
+      "type": "string",
+      "required": true
+    },
+    "password": {
+      "title": "FordPass Password",
+      "type": "string",
+      "required": true
+    },
+    "vehicles": {
+      "title": "Vehicles",
+      "type": "array",
+      "items": {
+        "title": "Vehicle",
+        "type": "object",
+        "properties": {
+          "name": {
+            "title": "Vehicle Name",
+            "type": "string",
+            "required": true
+          },
+          "vin": {
+            "title": "VIN",
+            "type": "string",
+            "required": true
+          }
+        }
+      }
+    }
+  }
+}
