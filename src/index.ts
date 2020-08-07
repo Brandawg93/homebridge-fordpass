@@ -48,6 +48,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   }
 
   configureAccessory(accessory: PlatformAccessory): void {
+    const self = this;
     this.log.info(`Configuring accessory ${accessory.displayName}`);
 
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
@@ -70,10 +71,11 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
     // Create Lock service
     const defaultState = 1;
-    const service = new hap.Service.LockMechanism();
-    service.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
+    const lockService = new hap.Service.LockMechanism();
+    const switchService = new hap.Service.Switch();
+    lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
-    service
+    lockService
       .setCharacteristic(hap.Characteristic.LockTargetState, defaultState)
       .getCharacteristic(hap.Characteristic.LockTargetState)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
@@ -83,26 +85,29 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         } else {
           await vehicle.issueCommand(Command.LOCK);
         }
-        service.updateCharacteristic(hap.Characteristic.LockCurrentState, value);
+        lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, value);
         callback();
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         const status = await vehicle.status();
+        if (!status) {
+          self.log.debug(`Cannot get information for ${accessory.displayName} lock`);
+          callback(new Error(), undefined);
+          return;
+        }
+        let lockNumber = 0;
         if (status) {
           const lockStatus = status.lockStatus.value;
-          let lockNumber = 0;
           if (lockStatus === 'LOCKED') {
             lockNumber = 1;
           }
-          service.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
         }
-        callback();
+        callback(null, lockNumber);
       });
 
-    accessory.addService(service);
+    accessory.addService(lockService);
 
-    accessory
-      .addService(new hap.Service.Switch())
+    switchService
       .setCharacteristic(hap.Characteristic.On, false)
       .getCharacteristic(hap.Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
@@ -116,16 +121,22 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         const status = await vehicle.status();
+        if (!status) {
+          self.log.debug(`Cannot get information for ${accessory.displayName} engine`);
+          callback(new Error(), undefined);
+          return;
+        }
+        let started = false;
         if (status) {
           const engineStatus = vehicle.info?.remoteStartStatus.value || 0;
-          let started = false;
           if (engineStatus > 0) {
             started = true;
           }
-          service.updateCharacteristic(hap.Characteristic.On, started);
         }
-        callback();
+        callback(null, started);
       });
+
+    accessory.addService(switchService);
 
     this.vehicles.push(vehicle);
     this.accessories.push(accessory);
@@ -174,6 +185,18 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         this.log.debug(`New vehicle found: ${vehicle.name}`);
         this.configureAccessory(accessory); // abusing the configureAccessory here
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+      }
+    });
+
+    // Remove vehicles that were removed from config
+    this.accessories.forEach((accessory: PlatformAccessory) => {
+      if (!vehicles.find((x: Vehicle) => x.vin === accessory.context.vin)) {
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
+        const index = this.accessories.indexOf(accessory);
+        if (index > -1) {
+          this.accessories.splice(index, 1);
+          this.vehicles.slice(index, 1);
+        }
       }
     });
   }
