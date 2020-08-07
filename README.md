@@ -18,6 +18,13 @@ Control your Ford vehicle in HomeKit using [Homebridge](https://github.com/nfari
 [![npm (tag)](https://img.shields.io/npm/v/homebridge-fordpass/test)](https://www.npmjs.com/package/homebridge-fordpass/v/test)
 [![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/brandawg93/homebridge-fordpass/latest)](https://github.com/Brandawg93/homebridge-fordpass/releases/latest)
 
+## Prerequisites
+Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/fordpass/fordpass-sync-connect.html). Download the app or contact your local dealer to see if your vehicle is compatible with FordPass Connect.
+
+<a href="https://c00.adobe.com/v3/6b72dd687901669e3ed55059dd6f60d5d3c844c25518eefaff82ed287725d462/start?a_dl=5ad0dab8511fb41c63233b99" aria-label="Google Play store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image">  
+<img alt="Google Play" src="https://owner.ford.com/ownerlibs/content/dam/ford-dot-com/cx_en_english/FordPass/1_LINCOLN-GOOGLE-store.png"></a>
+<a href="https://c00.adobe.com/v3/6b72dd687901669e3ed55059dd6f60d5d3c844c25518eefaff82ed287725d462/start?a_dl=5ad0da2e511fb41c63233b8e" aria-label="Apple App Store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image"><img alt="Apple App Store" src="https://owner.ford.com/ownerlibs/content/dam/ford-dot-com/cx_en_english/FordPass/1_LINCOLN-APPLE-store.png"></a>
+
 ## Installation
 1. Install this plugin using: `npm install -g --unsafe-perm homebridge-fordpass`
 2. Add username, passwrod, and vehicles to `config.json`
