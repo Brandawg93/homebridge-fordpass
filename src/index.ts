@@ -102,6 +102,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
             lockNumber = 1;
           }
         }
+        lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
         callback(null, lockNumber);
       });
 
