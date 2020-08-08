@@ -46,7 +46,7 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 ```
 
 ## Things to try
-- "Hey siri, start my car."
+- "Hey siri, turn on my car."
 - "Hey siri, is the mustang locked?"
 - "Hey siri, lock the raptor."
 
