@@ -31,13 +31,18 @@ export class Connection {
       }),
     };
 
-    const result = await axios(options);
-    if (result.status === 200) {
-      this.config.access_token = result.data.access_token;
-      return true;
-    } else {
-      this.log.error(`Auth failed with status: ${status}`);
+    try {
+      const result = await axios(options);
+      if (result.status === 200) {
+        this.config.access_token = result.data.access_token;
+        return true;
+      } else {
+        this.log.error(`Auth failed with status: ${status}`);
+      }
+      return false;
+    } catch (error) {
+      this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
+      return false;
     }
-    return false;
   }
 }

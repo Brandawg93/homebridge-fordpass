@@ -40,13 +40,17 @@ export class Vehicle {
 
     options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
     options.headers['auth-token'] = this.config.access_token;
-    const result = await axios(options);
-    if (result.status === 200 && result.data.status === 200) {
-      return result.data.vehiclestatus as VehicleInfo;
-    } else if (result.data.status === 401) {
-      this.log.error(`You do not have authorization to access ${this.name}.`);
-    } else {
-      handleError('Status', result.data.status, this.log);
+    try {
+      const result = await axios(options);
+      if (result.status === 200 && result.data.status === 200) {
+        return result.data.vehiclestatus as VehicleInfo;
+      } else if (result.data.status === 401) {
+        this.log.error(`You do not have authorization to access ${this.name}.`);
+      } else {
+        handleError('Status', result.data.status, this.log);
+      }
+    } catch (error) {
+      this.log.error(`Status failed with error: ${error.code || error.response.status}`);
     }
   }
 
