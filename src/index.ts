@@ -158,10 +158,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       await this.addVehicles();
       await this.updateVehicles();
 
-      // Vehicle info needs to be updated every 30 minutes
+      // Vehicle info needs to be updated every minute
       setInterval(async function () {
         await self.updateVehicles();
-      }, 1800000);
+      }, 60000);
     }
   }
 
