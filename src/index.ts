@@ -15,6 +15,7 @@ import {
 import { Vehicle } from './fordpass';
 import { Command } from './models/vehicle-info';
 import { Connection } from './fordpass-connection';
+import { FordpassAccessory } from './accessory';
 
 let hap: HAP;
 let Accessory: typeof PlatformAccessory;
@@ -56,23 +57,12 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     });
 
     const vehicle = new Vehicle(accessory.context.name, accessory.context.vin, this.config, this.log);
-
-    const oldLockService = accessory.getService(hap.Service.LockMechanism);
-    if (oldLockService) {
-      this.log.debug(`Existing lock found for ${accessory.displayName}. Removing...`);
-      accessory.removeService(oldLockService);
-    }
-
-    const oldSwitchService = accessory.getService(hap.Service.Switch);
-    if (oldSwitchService) {
-      this.log.debug(`Existing switch found for ${accessory.displayName}. Removing...`);
-      accessory.removeService(oldSwitchService);
-    }
+    const fordAccessory = new FordpassAccessory(accessory);
 
     // Create Lock service
     const defaultState = 1;
-    const lockService = new hap.Service.LockMechanism();
-    const switchService = new hap.Service.Switch();
+    const lockService = fordAccessory.createService(hap.Service.LockMechanism);
+    const switchService = fordAccessory.createService(hap.Service.Switch);
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
     lockService
@@ -106,8 +96,6 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         callback(null, lockNumber);
       });
 
-    accessory.addService(lockService);
-
     switchService
       .setCharacteristic(hap.Characteristic.On, false)
       .getCharacteristic(hap.Characteristic.On)
@@ -136,8 +124,6 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
         callback(null, started);
       });
-
-    accessory.addService(switchService);
 
     this.vehicles.push(vehicle);
     this.accessories.push(accessory);
