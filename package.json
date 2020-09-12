@@ -12,12 +12,16 @@
   },
   "funding": [
     {
-      "type" : "paypal",
-      "url" : "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url"
+      "type": "paypal",
+      "url": "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url"
     },
     {
-      "type" : "github",
-      "url" : "https://github.com/sponsors/Brandawg93"
+      "type": "individual",
+      "url": "https://www.buymeacoffee.com/L1FgZTD"
+    },
+    {
+      "type": "github",
+      "url": "https://github.com/sponsors/Brandawg93"
     }
   ],
   "scripts": {
