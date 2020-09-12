@@ -2,6 +2,7 @@ import axios from 'axios';
 import { AxiosRequestConfig, Method } from 'axios';
 import { PlatformConfig, Logging } from 'homebridge';
 import { VehicleInfo, Command } from './models/vehicle-info';
+import { CommandStatus } from './models/command-info';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -17,18 +18,27 @@ const handleError = function (name: string, status: number, log: Logging): void 
 export class Vehicle {
   private config: PlatformConfig;
   private readonly log: Logging;
-  public name: string;
-  public vin: string;
-  public info: VehicleInfo | undefined;
+  private info: VehicleInfo | undefined;
+  private lastUpdatedTime: Date;
+  name: string;
+  vin: string;
 
   constructor(name: string, vin: string, config: PlatformConfig, log: Logging) {
     this.config = config;
     this.log = log;
     this.name = name;
     this.vin = vin;
+    this.lastUpdatedTime = new Date();
   }
 
   async status(): Promise<VehicleInfo | undefined> {
+    // Only update if more than one second has elapsed
+    const checkTime = new Date(this.lastUpdatedTime);
+    checkTime.setSeconds(checkTime.getSeconds() + 1);
+    if (new Date().getTime() < checkTime.getTime()) {
+      return this.info;
+    }
+
     const url = fordAPIUrl + `/api/vehicles/v4/${this.vin}/status`;
     const options: AxiosRequestConfig = {
       url: url,
@@ -43,7 +53,8 @@ export class Vehicle {
     try {
       const result = await axios(options);
       if (result.status === 200 && result.data.status === 200) {
-        return result.data.vehiclestatus as VehicleInfo;
+        this.info = result.data.vehiclestatus as VehicleInfo;
+        return this.info;
       } else if (result.data.status === 401) {
         this.log.error(`You do not have authorization to access ${this.name}.`);
       } else {
@@ -54,7 +65,7 @@ export class Vehicle {
     }
   }
 
-  async issueCommand(command: Command): Promise<void> {
+  async issueCommand(command: Command): Promise<string> {
     let method: Method = 'GET';
     let endpoint = '';
     switch (command) {
@@ -97,15 +108,18 @@ export class Vehicle {
       const result = await axios(options);
       if (result.status !== 200) {
         handleError('IssueCommand', result.status, this.log);
+        return '';
       }
+      return result.data.commandId;
     }
+    return '';
   }
 
-  async commandStatus(command: string, commandId: string): Promise<string> {
+  async commandStatus(command: Command, commandId: string): Promise<CommandStatus | undefined> {
     let endpoint = '';
-    if (command == 'start' || command == 'stop') {
+    if (command == Command.START || command == Command.STOP) {
       endpoint = `api/vehicles/v2/${this.vin}/engine/start/${commandId}`;
-    } else if (command == 'lock' || command == 'unlock') {
+    } else if (command == Command.LOCK || command == Command.UNLOCK) {
       endpoint = `api/vehicles/v2/${this.vin}/doors/lock/${commandId}`;
     } else {
       this.log.error('invalid command');
@@ -121,10 +135,10 @@ export class Vehicle {
     options.headers['auth-token'] = this.config.access_token;
     const result = await axios(options);
     if (result.status == 200) {
-      return result.data.status;
+      return result.data as CommandStatus;
     } else {
       handleError('CommandStatus', result.status, this.log);
     }
-    return '';
+    return;
   }
 }
