@@ -29,6 +29,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   private readonly accessories: Array<PlatformAccessory> = [];
   private readonly vehicles: Array<Vehicle> = [];
   private config: PlatformConfig;
+  private pendingLockUpdate = false;
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     this.log = log;
@@ -60,10 +61,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const fordAccessory = new FordpassAccessory(accessory);
 
     // Create Lock service
-    const defaultState = 1;
+    const defaultState = hap.Characteristic.LockTargetState.UNSECURED;
     const lockService = fordAccessory.createService(hap.Service.LockMechanism);
     const switchService = fordAccessory.createService(hap.Service.Switch);
-    const batteryService = fordAccessory.createService(hap.Service.BatteryService);
+    const batteryService = fordAccessory.createService(hap.Service.BatteryService, 'Fuel Level');
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
     lockService
@@ -71,12 +72,30 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.LockTargetState)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
         this.log.debug(`${value ? 'Locking' : 'Unlocking'} ${accessory.displayName}`);
+        let commandId = '';
+        let command = Command.LOCK;
         if (value === hap.Characteristic.LockTargetState.UNSECURED) {
-          await vehicle.issueCommand(Command.UNLOCK);
-        } else {
-          await vehicle.issueCommand(Command.LOCK);
+          command = Command.UNLOCK;
         }
-        lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, value);
+        commandId = await vehicle.issueCommand(command);
+
+        let tries = 30;
+        this.pendingLockUpdate = true;
+        const self = this;
+        const interval = setInterval(async () => {
+          if (tries > 0) {
+            const status = await vehicle.commandStatus(command, commandId);
+            if (status?.status === 200) {
+              lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, value);
+              self.pendingLockUpdate = false;
+              clearInterval(interval);
+            }
+            tries--;
+          } else {
+            self.pendingLockUpdate = false;
+            clearInterval(interval);
+          }
+        }, 1000);
         callback(undefined, value);
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
@@ -220,9 +239,11 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       const uuid = hap.uuid.generate(vehicle.vin);
       const accessory = this.accessories.find((x: PlatformAccessory) => x.UUID === uuid);
 
-      const lockService = accessory?.getService(hap.Service.LockMechanism);
-      lockService && lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
-      lockService && lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
+      if (!this.pendingLockUpdate) {
+        const lockService = accessory?.getService(hap.Service.LockMechanism);
+        lockService && lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
+        lockService && lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
+      }
 
       const switchService = accessory?.getService(hap.Service.Switch);
       switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);

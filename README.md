@@ -51,6 +51,7 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 - "Hey siri, turn on my car."
 - "Hey siri, is the mustang locked?"
 - "Hey siri, lock the raptor."
+- "Hey siri, what is the fuel level of my fusion?"
 
 ## Donate to Support homebridge-fordpass
 This plugin was made with you in mind. If you would like to show your appreciation for its continued development, please consider making [a small donation](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url).
