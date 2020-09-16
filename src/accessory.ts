@@ -26,7 +26,7 @@ export class FordpassAccessory {
     return service;
   }
 
-  getServicesByType(serviceType: ServiceType) {
+  getServicesByType(serviceType: ServiceType): Array<Service> {
     return this.accessory.services.filter((x) => x.UUID === serviceType.UUID);
   }
 }

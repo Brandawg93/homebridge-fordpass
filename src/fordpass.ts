@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { AxiosRequestConfig, Method } from 'axios';
 import { PlatformConfig, Logging } from 'homebridge';
-import { VehicleInfo, Command } from './models/vehicle-info';
-import { CommandStatus } from './models/command-info';
+import { VehicleInfo, Command } from './models/vehicle';
+import { CommandStatus } from './models/command';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -117,9 +117,9 @@ export class Vehicle {
 
   async commandStatus(command: Command, commandId: string): Promise<CommandStatus | undefined> {
     let endpoint = '';
-    if (command == Command.START || command == Command.STOP) {
+    if (command === Command.START || command === Command.STOP) {
       endpoint = `api/vehicles/v2/${this.vin}/engine/start/${commandId}`;
-    } else if (command == Command.LOCK || command == Command.UNLOCK) {
+    } else if (command === Command.LOCK || command === Command.UNLOCK) {
       endpoint = `api/vehicles/v2/${this.vin}/doors/lock/${commandId}`;
     } else {
       this.log.error('invalid command');
@@ -134,7 +134,7 @@ export class Vehicle {
     options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
     options.headers['auth-token'] = this.config.access_token;
     const result = await axios(options);
-    if (result.status == 200) {
+    if (result.status === 200) {
       return result.data as CommandStatus;
     } else {
       handleError('CommandStatus', result.status, this.log);
