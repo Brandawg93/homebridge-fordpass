@@ -13,7 +13,8 @@ import {
   PlatformConfig,
 } from 'homebridge';
 import { Vehicle } from './fordpass';
-import { Command } from './models/vehicle-info';
+import { Command } from './models/vehicle';
+import { FordpassConfig, VehicleConfig } from './models/config';
 import { Connection } from './fordpass-connection';
 import { FordpassAccessory } from './accessory';
 
@@ -28,13 +29,13 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   private readonly api: API;
   private readonly accessories: Array<PlatformAccessory> = [];
   private readonly vehicles: Array<Vehicle> = [];
-  private config: PlatformConfig;
+  private config: FordpassConfig;
   private pendingLockUpdate = false;
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
     this.log = log;
     this.api = api;
-    this.config = config;
+    this.config = config as FordpassConfig;
 
     // Need a config or plugin will not start
     if (!config) {
@@ -169,7 +170,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
     if (connected) {
       // FordPass needs to be reauthenticated about every 2 hours
-      setInterval(async function () {
+      setInterval(async () => {
         self.log.debug('Reauthenticating with config credentials');
         await ford.auth();
       }, 7080000); // 118 minutes
@@ -178,7 +179,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       await this.updateVehicles();
 
       // Vehicle info needs to be updated every minute
-      setInterval(async function () {
+      setInterval(async () => {
         await self.updateVehicles();
       }, 60000);
     }
@@ -186,12 +187,11 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
   async addVehicles(): Promise<void> {
     const vehicles = this.config.vehicles;
-    vehicles.forEach(async (vehicle: any) => {
+    vehicles?.forEach(async (vehicle: VehicleConfig) => {
       vehicle.vin = vehicle.vin.toUpperCase();
       const uuid = hap.uuid.generate(vehicle.vin);
       const accessory = new Accessory(vehicle.name, uuid);
-      accessory.context.name = vehicle.name;
-      accessory.context.vin = vehicle.vin;
+      accessory.context.info = vehicle;
 
       const accessoryInformation = accessory.getService(hap.Service.AccessoryInformation);
       if (accessoryInformation) {
@@ -209,8 +209,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     });
 
     // Remove vehicles that were removed from config
-    this.accessories.forEach((accessory: PlatformAccessory) => {
-      if (!vehicles.find((x: Vehicle) => x.vin === accessory.context.vin)) {
+    this.accessories.forEach((accessory: PlatformAccessory<Record<string, VehicleConfig>>) => {
+      if (!vehicles?.find((x: VehicleConfig) => x.vin === accessory.context.info.vin)) {
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         const index = this.accessories.indexOf(accessory);
         if (index > -1) {

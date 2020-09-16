@@ -1,15 +1,16 @@
-import { PlatformConfig, Logging } from 'homebridge';
+import { Logging } from 'homebridge';
 import querystring from 'querystring';
 import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
+import { FordpassConfig } from './models/config';
 
 const authUrl = 'https://fcis.ice.ibmcloud.com/';
 
 export class Connection {
-  private config: PlatformConfig;
+  private config: FordpassConfig;
   private readonly log: Logging;
 
-  constructor(config: PlatformConfig, log: Logging) {
+  constructor(config: FordpassConfig, log: Logging) {
     this.config = config;
     this.log = log;
   }
