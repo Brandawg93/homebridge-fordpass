@@ -191,7 +191,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       vehicle.vin = vehicle.vin.toUpperCase();
       const uuid = hap.uuid.generate(vehicle.vin);
       const accessory = new Accessory(vehicle.name, uuid);
-      accessory.context.info = vehicle;
+      accessory.context.name = vehicle.name;
+      accessory.context.vin = vehicle.vin;
 
       const accessoryInformation = accessory.getService(hap.Service.AccessoryInformation);
       if (accessoryInformation) {
@@ -209,8 +210,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     });
 
     // Remove vehicles that were removed from config
-    this.accessories.forEach((accessory: PlatformAccessory<Record<string, VehicleConfig>>) => {
-      if (!vehicles?.find((x: VehicleConfig) => x.vin === accessory.context.info.vin)) {
+    this.accessories.forEach((accessory: PlatformAccessory<Record<string, string>>) => {
+      if (!vehicles?.find((x: VehicleConfig) => x.vin === accessory.context.vin)) {
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         const index = this.accessories.indexOf(accessory);
         if (index > -1) {
