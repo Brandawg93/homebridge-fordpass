@@ -38,7 +38,7 @@ export class Connection {
         this.config.access_token = result.data.access_token;
         return true;
       } else {
-        this.log.error(`Auth failed with status: ${status}`);
+        this.log.error(`Auth failed with status: ${result.status}`);
       }
       return false;
     } catch (error) {
