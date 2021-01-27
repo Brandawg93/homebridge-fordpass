@@ -29,6 +29,16 @@
             "title": "VIN",
             "type": "string",
             "required": true
+          },
+          "autoRefresh": {
+            "title": "Auto-refresh",
+            "type": "boolean",
+            "required": true
+          },
+          "refreshRate": {
+            "title": "Refresh rate (in minutes)",
+            "type": "number",
+            "required": false
           }
         }
       }

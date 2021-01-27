@@ -22,12 +22,16 @@ export class Vehicle {
   private lastUpdatedTime: Date;
   name: string;
   vin: string;
+  autoRefresh: boolean;
+  refreshRate: number;
 
-  constructor(name: string, vin: string, config: PlatformConfig, log: Logging) {
+  constructor(name: string, vin: string, autoRefresh: boolean, refreshRate: number, config: PlatformConfig, log: Logging) {
     this.config = config;
     this.log = log;
     this.name = name;
     this.vin = vin;
+    this.autoRefresh = autoRefresh;
+    this.refreshRate = refreshRate;
     this.lastUpdatedTime = new Date();
   }
 
@@ -89,6 +93,11 @@ export class Vehicle {
         endpoint = `api/vehicles/v2/${this.vin}/doors/lock`;
         break;
       }
+      case Command.REFRESH: {
+        method = 'PUT';
+        endpoint = `api/vehicles/v2/${this.vin}/status`;
+        break;
+      }
       default: {
         this.log.error('invalid command');
         break;
@@ -121,6 +130,8 @@ export class Vehicle {
       endpoint = `api/vehicles/v2/${this.vin}/engine/start/${commandId}`;
     } else if (command === Command.LOCK || command === Command.UNLOCK) {
       endpoint = `api/vehicles/v2/${this.vin}/doors/lock/${commandId}`;
+    } else if (command === Command.REFRESH) {
+      endpoint = `api/vehicles/v2/${this.vin}/status/${commandId}`;
     } else {
       this.log.error('invalid command');
     }

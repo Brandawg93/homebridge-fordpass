@@ -58,7 +58,14 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       this.log.info(`${accessory.displayName} identified!`);
     });
 
-    const vehicle = new Vehicle(accessory.context.name, accessory.context.vin, this.config, this.log);
+    const vehicle = new Vehicle(
+        accessory.context.name,
+        accessory.context.vin,
+        accessory.context.autoRefresh,
+        accessory.context.refreshRate,
+        this.config,
+        this.log
+    );
     const fordAccessory = new FordpassAccessory(accessory);
 
     // Create Lock service
@@ -177,6 +184,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
       await this.addVehicles();
       await this.updateVehicles();
+      await this.refreshVehicles();
 
       // Vehicle info needs to be updated every minute
       setInterval(async () => {
@@ -193,6 +201,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       const accessory = new Accessory(vehicle.name, uuid);
       accessory.context.name = vehicle.name;
       accessory.context.vin = vehicle.vin;
+      accessory.context.autoRefresh = vehicle.autoRefresh;
+      accessory.context.refreshRate = vehicle.refreshRate;
 
       const accessoryInformation = accessory.getService(hap.Service.AccessoryInformation);
       if (accessoryInformation) {
@@ -248,6 +258,18 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
       const switchService = accessory?.getService(hap.Service.Switch);
       switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
+    });
+  }
+
+  async refreshVehicles(): Promise<void> {
+    this.vehicles.forEach(async (vehicle: Vehicle) => {
+      if (vehicle.autoRefresh && vehicle.refreshRate && vehicle.refreshRate > 0) {
+        this.log.debug(`Configuring ${vehicle.name} to refresh every ${vehicle.refreshRate} minutes.`);
+        setInterval(async () => {
+          this.log.debug(`Refreshing info for ${vehicle.name}`);
+          await vehicle.issueCommand(Command.REFRESH)
+        }, 60000 * vehicle.refreshRate);
+      }
     });
   }
 }
