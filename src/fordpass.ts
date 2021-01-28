@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { AxiosRequestConfig, Method } from 'axios';
-import { PlatformConfig, Logging } from 'homebridge';
+import { Logging } from 'homebridge';
 import { VehicleInfo, Command } from './models/vehicle';
 import { CommandStatus } from './models/command';
+import { FordpassConfig } from './models/config';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -16,18 +17,22 @@ const handleError = function (name: string, status: number, log: Logging): void 
 };
 
 export class Vehicle {
-  private config: PlatformConfig;
+  private config: FordpassConfig;
   private readonly log: Logging;
   private info: VehicleInfo | undefined;
   private lastUpdatedTime: Date;
   name: string;
   vin: string;
+  autoRefresh: boolean;
+  refreshRate: number;
 
-  constructor(name: string, vin: string, config: PlatformConfig, log: Logging) {
+  constructor(name: string, vin: string, config: FordpassConfig, log: Logging) {
     this.config = config;
     this.log = log;
     this.name = name;
     this.vin = vin;
+    this.autoRefresh = config.options?.autoRefresh || false;
+    this.refreshRate = config.options?.refreshRate || 180;
     this.lastUpdatedTime = new Date();
   }
 
@@ -89,6 +94,11 @@ export class Vehicle {
         endpoint = `api/vehicles/v2/${this.vin}/doors/lock`;
         break;
       }
+      case Command.REFRESH: {
+        method = 'PUT';
+        endpoint = `api/vehicles/v2/${this.vin}/status`;
+        break;
+      }
       default: {
         this.log.error('invalid command');
         break;
@@ -121,6 +131,8 @@ export class Vehicle {
       endpoint = `api/vehicles/v2/${this.vin}/engine/start/${commandId}`;
     } else if (command === Command.LOCK || command === Command.UNLOCK) {
       endpoint = `api/vehicles/v2/${this.vin}/doors/lock/${commandId}`;
+    } else if (command === Command.REFRESH) {
+      endpoint = `api/vehicles/v2/${this.vin}/status/${commandId}`;
     } else {
       this.log.error('invalid command');
     }

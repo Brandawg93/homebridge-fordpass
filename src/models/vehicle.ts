@@ -46,6 +46,7 @@ export enum Command {
   UNLOCK = 'unlock',
   START = 'start',
   STOP = 'stop',
+  REFRESH = 'refresh',
 }
 
 export interface VehicleInfo {
