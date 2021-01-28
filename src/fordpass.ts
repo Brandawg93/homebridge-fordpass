@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { AxiosRequestConfig, Method } from 'axios';
-import { PlatformConfig, Logging } from 'homebridge';
+import { Logging } from 'homebridge';
 import { VehicleInfo, Command } from './models/vehicle';
 import { CommandStatus } from './models/command';
+import { FordpassConfig } from './models/config';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -16,7 +17,7 @@ const handleError = function (name: string, status: number, log: Logging): void 
 };
 
 export class Vehicle {
-  private config: PlatformConfig;
+  private config: FordpassConfig;
   private readonly log: Logging;
   private info: VehicleInfo | undefined;
   private lastUpdatedTime: Date;
@@ -25,13 +26,13 @@ export class Vehicle {
   autoRefresh: boolean;
   refreshRate: number;
 
-  constructor(name: string, vin: string, autoRefresh: boolean, refreshRate: number, config: PlatformConfig, log: Logging) {
+  constructor(name: string, vin: string, config: FordpassConfig, log: Logging) {
     this.config = config;
     this.log = log;
     this.name = name;
     this.vin = vin;
-    this.autoRefresh = autoRefresh;
-    this.refreshRate = refreshRate;
+    this.autoRefresh = config.options?.autoRefresh || false;
+    this.refreshRate = config.options?.refreshRate || 180;
     this.lastUpdatedTime = new Date();
   }
 
