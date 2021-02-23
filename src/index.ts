@@ -177,6 +177,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
       await this.addVehicles();
       await this.updateVehicles();
+      await this.refreshVehicles();
 
       // Vehicle info needs to be updated every minute
       setInterval(async () => {
@@ -248,6 +249,18 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
       const switchService = accessory?.getService(hap.Service.Switch);
       switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
+    });
+  }
+
+  async refreshVehicles(): Promise<void> {
+    this.vehicles.forEach(async (vehicle: Vehicle) => {
+      if (vehicle.autoRefresh && vehicle.refreshRate && vehicle.refreshRate > 0) {
+        this.log.debug(`Configuring ${vehicle.name} to refresh every ${vehicle.refreshRate} minutes.`);
+        setInterval(async () => {
+          this.log.debug(`Refreshing info for ${vehicle.name}`);
+          await vehicle.issueCommand(Command.REFRESH);
+        }, 60000 * vehicle.refreshRate);
+      }
     });
   }
 }

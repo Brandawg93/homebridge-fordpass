@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge FordPass",
   "name": "homebridge-fordpass",
-  "version": "1.2.1",
+  "version": "1.3.0-test.0",
   "description": "Fordpass plugin for homebridge: https://homebridge.io/",
   "main": "dist/index.js",
   "license": "GPL-3.0",
@@ -17,7 +17,7 @@
     },
     {
       "type": "paypal",
-      "url": "https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url"
+      "url": "https://www.paypal.com/donate/?business=CEYYGVB7ZZ764&item_name=homebridge-fordpass"
     }
   ],
   "scripts": {
