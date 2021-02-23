@@ -56,5 +56,4 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 ## Donate to Support homebridge-fordpass
 This plugin was made with you in mind. If you would like to show your appreciation for its continued development, please consider making [a small donation](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url).
 
-## Disclaimer
-This plugin and its contributers are not affiliated with Ford Motor Company in any way.
+<sub><sup>**Disclaimer:** This plugin and its contributers are not affiliated with Ford Motor Company in any way.</sub></sup>
