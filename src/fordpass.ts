@@ -19,8 +19,8 @@ const handleError = function (name: string, status: number, log: Logging): void 
 export class Vehicle {
   private config: FordpassConfig;
   private readonly log: Logging;
-  private info: VehicleInfo | undefined;
-  private lastUpdatedTime: Date;
+  public info: VehicleInfo | undefined;
+  private lastUpdatedTime: Date | undefined;
   name: string;
   vin: string;
   autoRefresh: boolean;
@@ -33,15 +33,16 @@ export class Vehicle {
     this.vin = vin;
     this.autoRefresh = config.options?.autoRefresh || false;
     this.refreshRate = config.options?.refreshRate || 180;
-    this.lastUpdatedTime = new Date();
   }
 
   async status(): Promise<VehicleInfo | undefined> {
     // Only update if more than one second has elapsed
-    const checkTime = new Date(this.lastUpdatedTime);
-    checkTime.setSeconds(checkTime.getSeconds() + 1);
-    if (new Date().getTime() < checkTime.getTime()) {
-      return this.info;
+    if (this.lastUpdatedTime) {
+      const checkTime = new Date(this.lastUpdatedTime);
+      checkTime.setSeconds(checkTime.getSeconds() + 10);
+      if (new Date().getTime() < checkTime.getTime()) {
+        return this.info;
+      }
     }
 
     const url = fordAPIUrl + `/api/vehicles/v4/${this.vin}/status`;
@@ -59,6 +60,7 @@ export class Vehicle {
       const result = await axios(options);
       if (result.status === 200 && result.data.status === 200) {
         this.info = result.data.vehiclestatus as VehicleInfo;
+        this.lastUpdatedTime = new Date();
         return this.info;
       } else if (result.data.status === 401) {
         this.log.error(`You do not have authorization to access ${this.name}.`);

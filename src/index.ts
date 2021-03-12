@@ -100,6 +100,14 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         callback(undefined, value);
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
+        // Return cached value immediately then update properly
+        let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
+        const lockStatus = vehicle?.info?.lockStatus.value;
+        if (lockStatus === 'LOCKED') {
+          lockNumber = hap.Characteristic.LockTargetState.SECURED;
+        }
+        callback(undefined, lockNumber);
+
         const status = await vehicle.status();
         if (status) {
           let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
@@ -108,10 +116,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
             lockNumber = hap.Characteristic.LockTargetState.SECURED;
           }
           lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
-          callback(undefined, lockNumber);
+          lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
         } else {
-          self.log.debug(`Cannot get information for ${accessory.displayName} lock`);
-          callback(new Error(), undefined);
+          self.log.error(`Cannot get information for ${accessory.displayName} lock`);
         }
       });
 
@@ -128,6 +135,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         callback(undefined, value);
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
+        // Return cached value immediately then update properly
+        const engineStatus = vehicle?.info?.remoteStartStatus.value || 0;
+        callback(undefined, engineStatus);
         const status = await vehicle.status();
         if (status) {
           let started = false;
@@ -135,10 +145,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
           if (engineStatus > 0) {
             started = true;
           }
-          callback(undefined, started);
+          switchService.updateCharacteristic(hap.Characteristic.On, started);
         } else {
-          self.log.debug(`Cannot get information for ${accessory.displayName} engine`);
-          callback(new Error(), undefined);
+          self.log.error(`Cannot get information for ${accessory.displayName} engine`);
         }
       });
 
@@ -146,12 +155,18 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .setCharacteristic(hap.Characteristic.BatteryLevel, 100)
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
+        // Return cached value immediately then update properly
+        const level = vehicle?.info?.fuel.fuelLevel || 100;
+        callback(undefined, level);
         const status = await vehicle.status();
         if (status) {
-          callback(undefined, status.fuel.fuelLevel);
+          let level = status.fuel.fuelLevel;
+          if (level > 100) {
+            level = 100;
+          }
+          batteryService.updateCharacteristic(hap.Characteristic.BatteryLevel, level);
         } else {
-          self.log.debug(`Cannot get information for ${accessory.displayName} engine`);
-          callback(new Error(), undefined);
+          self.log.error(`Cannot get information for ${accessory.displayName} engine`);
         }
       });
     batteryService.setCharacteristic(hap.Characteristic.ChargingState, hap.Characteristic.ChargingState.NOT_CHARGEABLE);
