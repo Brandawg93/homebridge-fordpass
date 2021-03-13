@@ -65,7 +65,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const defaultState = hap.Characteristic.LockTargetState.UNSECURED;
     const lockService = fordAccessory.createService(hap.Service.LockMechanism);
     const switchService = fordAccessory.createService(hap.Service.Switch);
-    const batteryService = fordAccessory.createService(hap.Service.BatteryService, 'Fuel Level');
+    const batteryService = fordAccessory.createService(hap.Service.Battery, 'Fuel Level');
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
     lockService
@@ -156,7 +156,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const level = vehicle?.info?.fuel.fuelLevel || 100;
+        let level = vehicle?.info?.fuel.fuelLevel || 100;
+        if (level > 100) {
+          level = 100;
+        }
         callback(undefined, level);
         const status = await vehicle.status();
         if (status) {
