@@ -13,8 +13,8 @@ import {
   PlatformConfig,
 } from 'homebridge';
 import { Vehicle } from './fordpass';
-import { Command } from './models/vehicle';
-import { FordpassConfig, VehicleConfig } from './models/config';
+import { Command } from './types/vehicle';
+import { FordpassConfig, VehicleConfig } from './types/config';
 import { Connection } from './fordpass-connection';
 import { FordpassAccessory } from './accessory';
 

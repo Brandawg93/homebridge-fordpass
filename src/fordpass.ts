@@ -1,9 +1,9 @@
 import axios from 'axios';
 import { AxiosRequestConfig, Method } from 'axios';
 import { Logging } from 'homebridge';
-import { VehicleInfo, Command } from './models/vehicle';
-import { CommandStatus } from './models/command';
-import { FordpassConfig } from './models/config';
+import { VehicleInfo, Command } from './types/vehicle';
+import { CommandStatus } from './types/command';
+import { FordpassConfig } from './types/config';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',

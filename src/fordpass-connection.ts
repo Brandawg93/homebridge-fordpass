@@ -2,7 +2,7 @@ import { Logging } from 'homebridge';
 import querystring from 'querystring';
 import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
-import { FordpassConfig } from './models/config';
+import { FordpassConfig } from './types/config';
 
 const authUrl = 'https://fcis.ice.ibmcloud.com/';
 
