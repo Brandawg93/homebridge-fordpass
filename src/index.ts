@@ -156,14 +156,18 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        let level = vehicle?.info?.fuel.fuelLevel || 100;
+        const fuel = vehicle?.info?.fuel?.fuelLevel;
+        const battery = vehicle?.info?.batteryFillLevel?.value;
+        let level = fuel || battery || 100;
         if (level > 100) {
           level = 100;
         }
         callback(undefined, level);
         const status = await vehicle.status();
         if (status) {
-          let level = status.fuel.fuelLevel;
+          const fuel = status.fuel?.fuelLevel;
+          const battery = status.batteryFillLevel?.value;
+          let level = fuel || battery || 100;
           if (level > 100) {
             level = 100;
           }

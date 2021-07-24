@@ -55,7 +55,7 @@ export interface VehicleInfo {
   alarm: Status;
   PrmtAlarmEvent: Status;
   odometer: Status;
-  fuel: Fuel;
+  fuel?: Fuel;
   gps: GPS;
   remoteStart: RemoteStart;
   remoteStartStatus: RemoteStartStatus;
@@ -67,7 +67,7 @@ export interface VehicleInfo {
   lastRefresh: string;
   lastModifiedDate: string;
   serverTime: string;
-  batteryFillLevel: any;
+  batteryFillLevel?: RemoteStartStatus;
   elVehDTE: any;
   hybridModeStatus: any;
   chargingStatus: any;
