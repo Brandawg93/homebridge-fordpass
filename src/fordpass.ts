@@ -54,8 +54,11 @@ export class Vehicle {
       },
     };
 
-    options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
-    options.headers['auth-token'] = this.config.access_token;
+    if (options.headers) {
+      options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+      options.headers['auth-token'] = this.config.access_token;
+    }
+
     try {
       const result = await axios(options);
       if (result.status === 200 && result.data.status === 200) {
@@ -67,7 +70,7 @@ export class Vehicle {
       } else {
         handleError('Status', result.data.status, this.log);
       }
-    } catch (error) {
+    } catch (error: any) {
       this.log.error(`Status failed with error: ${error.code || error.response.status}`);
     }
   }
@@ -115,8 +118,10 @@ export class Vehicle {
         headers: defaultHeaders,
       };
 
-      options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
-      options.headers['auth-token'] = this.config.access_token;
+      if (options.headers) {
+        options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+        options.headers['auth-token'] = this.config.access_token;
+      }
       const result = await axios(options);
       if (result.status !== 200) {
         handleError('IssueCommand', result.status, this.log);
@@ -145,8 +150,10 @@ export class Vehicle {
       headers: defaultHeaders,
     };
 
-    options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
-    options.headers['auth-token'] = this.config.access_token;
+    if (options.headers) {
+      options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+      options.headers['auth-token'] = this.config.access_token;
+    }
     const result = await axios(options);
     if (result.status === 200) {
       return result.data as CommandStatus;

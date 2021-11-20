@@ -41,7 +41,7 @@ export class Connection {
         this.log.error(`Auth failed with status: ${result.status}`);
       }
       return false;
-    } catch (error) {
+    } catch (error: any) {
       this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
       return false;
     }
