@@ -162,25 +162,57 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         if (level > 100) {
           level = 100;
         }
+        if (level < 0) {
+          level = 0;
+        }
         callback(undefined, level);
         const status = await vehicle.status();
         if (status) {
           const fuel = status.fuel?.fuelLevel;
           const battery = status.batteryFillLevel?.value;
+          const chargingStatus = vehicle?.info?.chargingStatus?.value;
           let level = fuel || battery || 100;
           if (level > 100) {
             level = 100;
           }
+          if (level < 0) {
+            level = 0;
+          }
           batteryService.updateCharacteristic(hap.Characteristic.BatteryLevel, level);
+          if (battery) {
+            if (chargingStatus === 'ChargingAC') {
+              batteryService.updateCharacteristic(
+                hap.Characteristic.ChargingState,
+                hap.Characteristic.ChargingState.CHARGING,
+              );
+            } else {
+              batteryService.updateCharacteristic(
+                hap.Characteristic.ChargingState,
+                hap.Characteristic.ChargingState.NOT_CHARGING,
+              );
+            }
+          } else {
+            batteryService.updateCharacteristic(
+              hap.Characteristic.ChargingState,
+              hap.Characteristic.ChargingState.NOT_CHARGEABLE,
+            );
+          }
+
+          if (level < 10) {
+            batteryService.updateCharacteristic(
+              hap.Characteristic.StatusLowBattery,
+              hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW,
+            );
+          } else {
+            batteryService.updateCharacteristic(
+              hap.Characteristic.StatusLowBattery,
+              hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
+            );
+          }
         } else {
           self.log.error(`Cannot get information for ${accessory.displayName} engine`);
         }
       });
-    batteryService.setCharacteristic(hap.Characteristic.ChargingState, hap.Characteristic.ChargingState.NOT_CHARGEABLE);
-    batteryService.setCharacteristic(
-      hap.Characteristic.StatusLowBattery,
-      hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
-    );
     this.vehicles.push(vehicle);
     this.accessories.push(accessory);
   }

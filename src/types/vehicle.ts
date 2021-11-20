@@ -69,9 +69,9 @@ export interface VehicleInfo {
   serverTime: string;
   batteryFillLevel?: RemoteStartStatus;
   elVehDTE: any;
-  hybridModeStatus: any;
-  chargingStatus: any;
-  plugStatus: any;
+  hybridModeStatus: Status;
+  chargingStatus: Status;
+  plugStatus: RemoteStartStatus;
   chargeStartTime: any;
   chargeEndTime: any;
   preCondStatusDsply: any;
