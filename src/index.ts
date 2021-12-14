@@ -227,7 +227,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       setInterval(async () => {
         self.log.debug('Reauthenticating with config credentials');
         await ford.auth();
-      }, 7080000); // 118 minutes
+      }, 290000); // 5 minutes - 10 seconds
 
       await this.addVehicles();
       await this.updateVehicles();
