@@ -13,6 +13,12 @@
       "type": "string",
       "required": true
     },
+    "refreshTokenRate": {
+      "title": "Refresh token rate (in seconds)",
+      "type": "number",
+      "required": true,
+      "default": 290
+    },
     "vehicles": {
       "title": "Vehicles",
       "type": "array",

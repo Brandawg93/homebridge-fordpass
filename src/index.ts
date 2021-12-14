@@ -223,11 +223,13 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const connected = await ford.auth();
 
     if (connected) {
+      const refreshTokenRate = this.config.refreshTokenRate || 290;
+
       // FordPass needs to be reauthenticated about every 2 hours
       setInterval(async () => {
         self.log.debug('Reauthenticating with config credentials');
         await ford.auth();
-      }, 7080000); // 118 minutes
+      }, refreshTokenRate * 1000); // 118 minutes
 
       await this.addVehicles();
       await this.updateVehicles();
