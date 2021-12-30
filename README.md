@@ -9,7 +9,6 @@ Control your Ford vehicle in HomeKit using [Homebridge](https://github.com/nfari
 [![NPM](https://nodei.co/npm/homebridge-fordpass.png?compact=true)](https://nodei.co/npm/homebridge-fordpass/)
 
 [![PayPal](https://img.shields.io/badge/paypal-donate-blue?logo=paypal)](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url)
-[![BuyMeACoffee](https://img.shields.io/badge/coffee-donate-orange?logo=buy-me-a-coffee&logoColor=yellow)](https://www.buymeacoffee.com/L1FgZTD)
 
 [![verified-by-homebridge](https://img.shields.io/badge/homebridge-verified-blueviolet?color=%23491F59)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
 ![build](https://github.com/Brandawg93/homebridge-fordpass/workflows/build/badge.svg)
@@ -57,6 +56,6 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 - "Hey siri, what is the fuel level of my fusion?"
 
 ## Donate to Support homebridge-fordpass
-This plugin was made with you in mind. If you would like to show your appreciation for its continued development, please consider making [a small donation](https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=CEYYGVB7ZZ764&item_name=homebridge-fordpass&currency_code=USD&source=url).
+This plugin was made with you in mind. If you would like to show your appreciation for its continued development, please consider [sponsoring me on Github](https://github.com/sponsors/Brandawg93).
 
 <sub><sup>**Disclaimer:** This plugin and its contributers are not affiliated with Ford Motor Company in any way.</sub></sup>
