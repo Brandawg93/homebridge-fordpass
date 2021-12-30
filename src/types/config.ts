@@ -1,6 +1,7 @@
 import { PlatformConfig } from 'homebridge';
 
 interface Options {
+  batteryName?: string;
   autoRefresh?: boolean;
   refreshRate?: number;
 }

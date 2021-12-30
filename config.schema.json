@@ -38,6 +38,12 @@
       "expandable": true,
       "type": "object",
       "properties": {
+        "batteryName": {
+          "title": "Battery Name",
+          "description": "The name to be used for the battery indicator.",
+          "type": "string",
+          "default": "Fuel Level"
+        },
         "autoRefresh": {
           "title": "Auto-refresh",
           "description": "Note: This will use your vehicle's battery to refresh data.",

@@ -65,7 +65,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const defaultState = hap.Characteristic.LockTargetState.UNSECURED;
     const lockService = fordAccessory.createService(hap.Service.LockMechanism);
     const switchService = fordAccessory.createService(hap.Service.Switch);
-    const batteryService = fordAccessory.createService(hap.Service.Battery, 'Fuel Level');
+    const batteryService = fordAccessory.createService(
+      hap.Service.Battery,
+      this.config.options?.batteryName || 'Fuel Level',
+    );
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
     lockService
