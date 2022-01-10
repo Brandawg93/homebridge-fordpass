@@ -7,7 +7,7 @@ import { FordpassConfig } from './types/config';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
-  'User-Agent': 'fordpass-na/353 CFNetwork/1121.2.2 Darwin/19.3.0',
+  'User-Agent': 'FordPass/5 CFNetwork/1325.0.1 Darwin/21.1.0',
 };
 
 const fordAPIUrl = 'https://usapi.cv.ford.com/';

@@ -4,7 +4,10 @@ import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 import { FordpassConfig } from './types/config';
 
-const authUrl = 'https://fcis.ice.ibmcloud.com/';
+const authUrl = 'https://sso.ci.ford.com/';
+const applicationId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+const clientId = '9fb503e0-715b-47e8-adfd-ad4b7770f73b';
+const userAgent = 'FordPass/5 CFNetwork/1325.0.1 Darwin/21.1.0';
 
 export class Connection {
   private config: FordpassConfig;
@@ -22,10 +25,10 @@ export class Connection {
       url: url,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'fordpass-na/353 CFNetwork/1121.2.2 Darwin/19.3.0',
+        'User-Agent': userAgent,
       },
       data: querystring.stringify({
-        client_id: '9fb503e0-715b-47e8-adfd-ad4b7770f73b',
+        client_id: clientId,
         grant_type: 'password',
         username: this.config.username,
         password: this.config.password,
@@ -35,25 +38,25 @@ export class Connection {
     try {
       const result = await axios(options);
       if (result.status === 200 && result.data.access_token) {
-        this.config.access_token = await axios
-          .put(
-            'https://api.mps.ford.com/api/oauth2/v1/token',
-            {
-              code: result.data.access_token,
+        const nextResult = await axios.put(
+          'https://api.mps.ford.com/api/oauth2/v1/token',
+          {
+            code: result.data.access_token,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': userAgent,
+              'Application-Id': applicationId,
             },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                'User-Agent': 'fordpass-na/353 CFNetwork/1121.2.2 Darwin/19.3.0',
-                'Application-Id': '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592',
-              },
-            },
-          )
-          .then((res) => res.data.access_token)
-          .catch((err) => {
-            throw err;
-          });
-        return true;
+          },
+        );
+        if (nextResult.status === 200 && nextResult.data.access_token) {
+          this.config.access_token = nextResult.data.access_token;
+          return true;
+        } else {
+          this.log.error(`Auth failed with status: ${nextResult.status}`);
+        }
       } else {
         this.log.error(`Auth failed with status: ${result.status}`);
       }
