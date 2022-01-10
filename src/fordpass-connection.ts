@@ -34,8 +34,25 @@ export class Connection {
 
     try {
       const result = await axios(options);
-      if (result.status === 200) {
-        this.config.access_token = result.data.access_token;
+      if (result.status === 200 && result.data.access_token) {
+        this.config.access_token = await axios
+          .put(
+            'https://api.mps.ford.com/api/oauth2/v1/token',
+            {
+              code: result.data.access_token,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'User-Agent': 'fordpass-na/353 CFNetwork/1121.2.2 Darwin/19.3.0',
+                'Application-Id': '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592',
+              },
+            },
+          )
+          .then((res) => res.data.access_token)
+          .catch((err) => {
+            throw err;
+          });
         return true;
       } else {
         this.log.error(`Auth failed with status: ${result.status}`);
