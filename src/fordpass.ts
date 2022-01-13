@@ -36,6 +36,9 @@ export class Vehicle {
   }
 
   async status(): Promise<VehicleInfo | undefined> {
+    if (!this.config.access_token) {
+      return;
+    }
     // Only update if more than one second has elapsed
     if (this.lastUpdatedTime) {
       const checkTime = new Date(this.lastUpdatedTime);
@@ -76,6 +79,9 @@ export class Vehicle {
   }
 
   async issueCommand(command: Command): Promise<string> {
+    if (!this.config.access_token) {
+      return '';
+    }
     let method: Method = 'GET';
     let endpoint = '';
     switch (command) {
@@ -133,6 +139,9 @@ export class Vehicle {
   }
 
   async commandStatus(command: Command, commandId: string): Promise<CommandStatus | undefined> {
+    if (!this.config.access_token) {
+      return;
+    }
     let endpoint = '';
     if (command === Command.START || command === Command.STOP) {
       endpoint = `api/vehicles/v2/${this.vin}/engine/start/${commandId}`;

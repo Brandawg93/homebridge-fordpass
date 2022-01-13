@@ -16,4 +16,6 @@ export interface FordpassConfig extends PlatformConfig {
   password?: string;
   vehicles?: Array<VehicleConfig>;
   options?: Options;
+  access_token?: string;
+  refresh_token?: string;
 }

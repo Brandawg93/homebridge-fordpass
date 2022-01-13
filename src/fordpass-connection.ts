@@ -18,7 +18,7 @@ export class Connection {
     this.log = log;
   }
 
-  async auth(): Promise<boolean> {
+  async auth(): Promise<any> {
     const url = authUrl + 'v1.0/endpoint/default/token';
     const options: AxiosRequestConfig = {
       method: 'POST',
@@ -53,17 +53,51 @@ export class Connection {
         );
         if (nextResult.status === 200 && nextResult.data.access_token) {
           this.config.access_token = nextResult.data.access_token;
-          return true;
+          this.config.refresh_token = nextResult.data.refresh_token;
+          return nextResult.data;
         } else {
           this.log.error(`Auth failed with status: ${nextResult.status}`);
         }
       } else {
         this.log.error(`Auth failed with status: ${result.status}`);
       }
-      return false;
+      return;
     } catch (error: any) {
       this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
-      return false;
+      return;
+    }
+  }
+
+  async refreshAuth(): Promise<any> {
+    try {
+      if (this.config.refresh_token) {
+        const result = await axios.put(
+          'https://api.mps.ford.com/api/oauth2/v1/refresh',
+          {
+            refresh_token: this.config.refresh_token,
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'User-Agent': userAgent,
+              'Application-Id': applicationId,
+            },
+          },
+        );
+        if (result.status === 200 && result.data.access_token) {
+          this.config.access_token = result.data.access_token;
+          this.config.refresh_token = result.data.refresh_token;
+          return result.data;
+        } else {
+          this.log.error(`Auth failed with status: ${result.status}`);
+        }
+      } else {
+        return await this.auth();
+      }
+      return;
+    } catch (error: any) {
+      this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
+      return;
     }
   }
 }
