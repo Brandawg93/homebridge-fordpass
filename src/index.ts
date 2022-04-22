@@ -42,8 +42,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       return;
     }
 
-    if (!config.username || !config.password || !config.vehicles) {
-      this.log.error('Please add a userame, password, and vehicles to your config.json');
+    if (!config.username || !config.password) {
+      this.log.error('Please add a userame and password to your config.json');
       return;
     }
 
@@ -231,7 +231,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         await ford.refreshAuth();
       }, authInfo.expires_in * 1000 - 10000);
 
-      await this.addVehicles();
+      await this.addVehicles(ford);
       await this.updateVehicles();
       await this.refreshVehicles();
 
@@ -242,25 +242,26 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     }
   }
 
-  async addVehicles(): Promise<void> {
-    const vehicles = this.config.vehicles;
+  async addVehicles(connection: Connection): Promise<void> {
+    const vehicles = await connection.getVehicles();
     vehicles?.forEach(async (vehicle: VehicleConfig) => {
       vehicle.vin = vehicle.vin.toUpperCase();
+      const name = vehicle.nickName || vehicle.vehicleType;
       const uuid = hap.uuid.generate(vehicle.vin);
-      const accessory = new Accessory(vehicle.name, uuid);
-      accessory.context.name = vehicle.name;
+      const accessory = new Accessory(name, uuid);
+      accessory.context.name = name;
       accessory.context.vin = vehicle.vin;
 
       const accessoryInformation = accessory.getService(hap.Service.AccessoryInformation);
       if (accessoryInformation) {
         accessoryInformation.setCharacteristic(hap.Characteristic.Manufacturer, 'Ford');
-        accessoryInformation.setCharacteristic(hap.Characteristic.Model, vehicle.name);
+        accessoryInformation.setCharacteristic(hap.Characteristic.Model, name);
         accessoryInformation.setCharacteristic(hap.Characteristic.SerialNumber, vehicle.vin);
       }
 
       // Only add new cameras that are not cached
       if (!this.accessories.find((x: PlatformAccessory) => x.UUID === uuid)) {
-        this.log.debug(`New vehicle found: ${vehicle.name}`);
+        this.log.debug(`New vehicle found: ${name}`);
         this.configureAccessory(accessory); // abusing the configureAccessory here
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }

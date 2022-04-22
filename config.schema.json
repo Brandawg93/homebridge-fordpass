@@ -13,31 +13,23 @@
       "type": "string",
       "required": true
     },
-    "vehicles": {
-      "title": "Vehicles",
-      "type": "array",
-      "items": {
-        "title": "Vehicle",
-        "type": "object",
-        "properties": {
-          "name": {
-            "title": "Vehicle Name",
-            "type": "string",
-            "required": true
-          },
-          "vin": {
-            "title": "VIN",
-            "type": "string",
-            "required": true
-          }
-        }
-      }
-    },
     "options": {
       "title": "Advanced Settings",
       "expandable": true,
       "type": "object",
       "properties": {
+        "region": {
+          "title": "Region",
+          "description": "Select the closest region to you.",
+          "type": "string",
+          "default": "US",
+          "oneOf": [
+            { "title": "US", "enum": ["71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592"] },
+            { "title": "CA", "enum": ["71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592"] },
+            { "title": "EU", "enum": ["1E8C7794-FF5F-49BC-9596-A1E0C86C5B19"] },
+            { "title": "AU", "enum": ["5C80A6BB-CF0D-4A30-BDBF-FC804B5C1A98"] }
+          ]
+        },
         "batteryName": {
           "title": "Battery Name",
           "description": "The name to be used for the battery indicator.",

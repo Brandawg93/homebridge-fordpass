@@ -5,21 +5,24 @@ import axios from 'axios';
 import { FordpassConfig } from './types/config';
 
 const authUrl = 'https://sso.ci.ford.com/';
-const applicationId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+const vehiclesUrl = 'https://services.cx.ford.com/api/dashboard/v1/users/vehicles';
+const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
 const clientId = '9fb503e0-715b-47e8-adfd-ad4b7770f73b';
 const userAgent = 'FordPass/5 CFNetwork/1325.0.1 Darwin/21.1.0';
 
 export class Connection {
   private config: FordpassConfig;
   private readonly log: Logging;
+  private applicationId: string;
 
   constructor(config: FordpassConfig, log: Logging) {
     this.config = config;
     this.log = log;
+    this.applicationId = config.options?.region || defaultAppId;
   }
 
   async auth(): Promise<any> {
-    const url = authUrl + 'v1.0/endpoint/default/token';
+    const url = authUrl + 'oidc/endpoint/default/token';
     const options: AxiosRequestConfig = {
       method: 'POST',
       url: url,
@@ -47,7 +50,7 @@ export class Connection {
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': userAgent,
-              'Application-Id': applicationId,
+              'Application-Id': this.applicationId,
             },
           },
         );
@@ -80,7 +83,7 @@ export class Connection {
             headers: {
               'Content-Type': 'application/json',
               'User-Agent': userAgent,
-              'Application-Id': applicationId,
+              'Application-Id': this.applicationId,
             },
           },
         );
@@ -98,6 +101,35 @@ export class Connection {
     } catch (error: any) {
       this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
       return;
+    }
+  }
+
+  async getVehicles(): Promise<Array<any>> {
+    if (!this.config.access_token) {
+      return [];
+    }
+    const options: AxiosRequestConfig = {
+      method: 'GET',
+      url: vehiclesUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': userAgent,
+        'Auth-Token': this.config.access_token,
+        'Application-Id': this.applicationId,
+      },
+    };
+
+    try {
+      const result = await axios(options);
+      if (result.status === 200 && result.data) {
+        return result.data;
+      } else {
+        this.log.error(`Vehicles failed with status: ${result.status}`);
+      }
+      return [];
+    } catch (error: any) {
+      this.log.error(`Vehicles failed with error: ${error.code || error.response.status}`);
+      return [];
     }
   }
 }
