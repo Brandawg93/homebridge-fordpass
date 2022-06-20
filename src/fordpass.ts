@@ -149,8 +149,6 @@ export class Vehicle {
       endpoint = `api/vehicles/v5/${this.vin}/doors/lock/${commandId}`;
     } else if (command === Command.REFRESH) {
       endpoint = `api/vehicles/v5/${this.vin}/status/${commandId}`;
-    } else if (command === Command.PANIC) {
-      endpoint = `api/vehicles/v5/${this.vin}/panic/${commandId}`;
     } else {
       this.log.error('invalid command');
     }
