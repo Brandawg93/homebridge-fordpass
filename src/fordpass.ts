@@ -7,7 +7,7 @@ import { FordpassConfig } from './types/config';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
-  'User-Agent': 'FordPass/5 CFNetwork/1325.0.1 Darwin/21.1.0',
+  'User-Agent': 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0',
 };
 
 const fordAPIUrl = 'https://usapi.cv.ford.com/';
@@ -48,7 +48,7 @@ export class Vehicle {
       }
     }
 
-    const url = fordAPIUrl + `/api/vehicles/v4/${this.vin}/status`;
+    const url = fordAPIUrl + `/api/vehicles/v5/${this.vin}/status`;
     const options: AxiosRequestConfig = {
       url: url,
       headers: defaultHeaders,
@@ -87,27 +87,27 @@ export class Vehicle {
     switch (command) {
       case Command.START: {
         method = 'PUT';
-        endpoint = `api/vehicles/v2/${this.vin}/engine/start`;
+        endpoint = `api/vehicles/v5/${this.vin}/engine/start`;
         break;
       }
       case Command.STOP: {
         method = 'DELETE';
-        endpoint = `api/vehicles/v2/${this.vin}/engine/start`;
+        endpoint = `api/vehicles/v5/${this.vin}/engine/start`;
         break;
       }
       case Command.LOCK: {
         method = 'PUT';
-        endpoint = `api/vehicles/v2/${this.vin}/doors/lock`;
+        endpoint = `api/vehicles/v5/${this.vin}/doors/lock`;
         break;
       }
       case Command.UNLOCK: {
         method = 'DELETE';
-        endpoint = `api/vehicles/v2/${this.vin}/doors/lock`;
+        endpoint = `api/vehicles/v5/${this.vin}/doors/lock`;
         break;
       }
       case Command.REFRESH: {
         method = 'PUT';
-        endpoint = `api/vehicles/v2/${this.vin}/status`;
+        endpoint = `api/vehicles/v5/${this.vin}/status`;
         break;
       }
       default: {
@@ -144,11 +144,13 @@ export class Vehicle {
     }
     let endpoint = '';
     if (command === Command.START || command === Command.STOP) {
-      endpoint = `api/vehicles/v2/${this.vin}/engine/start/${commandId}`;
+      endpoint = `api/vehicles/v5/${this.vin}/engine/start/${commandId}`;
     } else if (command === Command.LOCK || command === Command.UNLOCK) {
-      endpoint = `api/vehicles/v2/${this.vin}/doors/lock/${commandId}`;
+      endpoint = `api/vehicles/v5/${this.vin}/doors/lock/${commandId}`;
     } else if (command === Command.REFRESH) {
-      endpoint = `api/vehicles/v2/${this.vin}/status/${commandId}`;
+      endpoint = `api/vehicles/v5/${this.vin}/status/${commandId}`;
+    } else if (command === Command.PANIC) {
+      endpoint = `api/vehicles/v5/${this.vin}/panic/${commandId}`;
     } else {
       this.log.error('invalid command');
     }
