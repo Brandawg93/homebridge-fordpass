@@ -55,7 +55,7 @@
         },
         "chargingSwitch": {
           "title": "Charging Switch",
-          "description": "Adds a button that can trigger automations when your vehicle begins charging.",
+          "description": "Adds a button that can trigger automations when your electric vehicle begins charging.",
           "type": "boolean",
           "default": false
         }
