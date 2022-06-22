@@ -69,6 +69,16 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       hap.Service.Battery,
       this.config.options?.batteryName || 'Fuel Level',
     );
+
+    if (this.config.options?.chargingSwitch) {
+      const chargingService = fordAccessory.createService(hap.Service.StatelessProgrammableSwitch);
+      chargingService.getCharacteristic(hap.Characteristic.ProgrammableSwitchEvent).setProps({
+        maxValue: hap.Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS,
+      });
+    } else {
+      fordAccessory.removeService(hap.Service.StatelessProgrammableSwitch);
+    }
+
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
     lockService
@@ -298,14 +308,31 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       const uuid = hap.uuid.generate(vehicle.vin);
       const accessory = this.accessories.find((x: PlatformAccessory) => x.UUID === uuid);
 
-      if (!this.pendingLockUpdate) {
-        const lockService = accessory?.getService(hap.Service.LockMechanism);
-        lockService && lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
-        lockService && lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
-      }
+      if (accessory) {
+        if (!this.pendingLockUpdate) {
+          const lockService = accessory.getService(hap.Service.LockMechanism);
+          lockService && lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
+          lockService && lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
+        }
+        const switchService = accessory.getService(hap.Service.Switch);
+        switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
 
-      const switchService = accessory?.getService(hap.Service.Switch);
-      switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
+        if (
+          this.config.options?.chargingSwitch &&
+          status?.chargingStatus?.value === 'ChargingAC' &&
+          !accessory.context.charge
+        ) {
+          const chargingService = accessory.getService(hap.Service.StatelessProgrammableSwitch);
+          chargingService &&
+            chargingService.updateCharacteristic(
+              hap.Characteristic.ProgrammableSwitchEvent,
+              hap.Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS,
+            );
+          accessory.context.charge = true;
+        } else if (accessory.context.charge) {
+          accessory.context.charge = false;
+        }
+      }
     });
   }
 

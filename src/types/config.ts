@@ -5,6 +5,7 @@ interface Options {
   batteryName?: string;
   autoRefresh?: boolean;
   refreshRate?: number;
+  chargingSwitch?: boolean;
 }
 
 export interface VehicleConfig {

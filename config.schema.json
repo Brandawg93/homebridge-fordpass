@@ -52,7 +52,13 @@
           "condition": {
             "functionBody": "return model.options.autoRefresh === true;"
           }          
-        }        
+        },
+        "chargingSwitch": {
+          "title": "Charging Switch",
+          "description": "Adds a button that can trigger automations when your vehicle begins charging.",
+          "type": "boolean",
+          "default": false
+        }
       }
     }
   }

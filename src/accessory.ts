@@ -29,4 +29,14 @@ export class FordpassAccessory {
   getServicesByType(serviceType: ServiceType): Array<Service> {
     return this.accessory.services.filter((x) => x.UUID === serviceType.UUID);
   }
+
+  removeService(serviceType: ServiceType, name?: string): void {
+    const existingService = name
+      ? this.accessory.getServiceById(serviceType, `${this.accessory.displayName} ${name}`)
+      : this.accessory.getService(serviceType);
+
+    if (existingService) {
+      this.accessory.removeService(existingService);
+    }
+  }
 }
