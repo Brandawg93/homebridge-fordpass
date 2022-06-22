@@ -4,48 +4,45 @@ import { Logging } from 'homebridge';
 import { VehicleInfo, Command } from './types/vehicle';
 import { CommandStatus } from './types/command';
 import { FordpassConfig } from './types/config';
+import { once, EventEmitter } from 'events';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'User-Agent': 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0',
 };
 
+const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
 const fordAPIUrl = 'https://usapi.cv.ford.com/';
 
 const handleError = function (name: string, status: number, log: Logging): void {
   log.error(`${name} failed with status: ${status}`);
 };
 
-export class Vehicle {
+export class Vehicle extends EventEmitter {
   private config: FordpassConfig;
   private readonly log: Logging;
   public info: VehicleInfo | undefined;
-  private lastUpdatedTime: Date | undefined;
+  private applicationId: string;
+  private updating = false;
   name: string;
   vin: string;
   autoRefresh: boolean;
   refreshRate: number;
 
   constructor(name: string, vin: string, config: FordpassConfig, log: Logging) {
+    super();
     this.config = config;
     this.log = log;
     this.name = name;
     this.vin = vin;
     this.autoRefresh = config.options?.autoRefresh || false;
     this.refreshRate = config.options?.refreshRate || 180;
+    this.applicationId = config.options?.region || defaultAppId;
   }
 
   async status(): Promise<VehicleInfo | undefined> {
     if (!this.config.access_token) {
       return;
-    }
-    // Only update if more than one second has elapsed
-    if (this.lastUpdatedTime) {
-      const checkTime = new Date(this.lastUpdatedTime);
-      checkTime.setSeconds(checkTime.getSeconds() + 10);
-      if (new Date().getTime() < checkTime.getTime()) {
-        return this.info;
-      }
     }
 
     const url = fordAPIUrl + `/api/vehicles/v5/${this.vin}/status`;
@@ -58,23 +55,32 @@ export class Vehicle {
     };
 
     if (options.headers) {
-      options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+      options.headers['Application-Id'] = this.applicationId;
       options.headers['auth-token'] = this.config.access_token;
     }
 
-    try {
-      const result = await axios(options);
-      if (result.status === 200 && result.data.status === 200) {
-        this.info = result.data.vehiclestatus as VehicleInfo;
-        this.lastUpdatedTime = new Date();
-        return this.info;
-      } else if (result.data.status === 401) {
-        this.log.error(`You do not have authorization to access ${this.name}.`);
-      } else {
-        handleError('Status', result.data.status, this.log);
+    if (!this.updating) {
+      try {
+        this.updating = true;
+        const result = await axios(options);
+        if (result.status === 200 && result.data.status === 200) {
+          this.info = result.data.vehiclestatus as VehicleInfo;
+          this.updating = false;
+          this.emit('updated');
+          return this.info;
+        } else if (result.data.status === 401) {
+          this.log.error(`You do not have authorization to access ${this.name}.`);
+        } else {
+          handleError('Status', result.data.status, this.log);
+        }
+        this.updating = false;
+        this.emit('updated');
+      } catch (error: any) {
+        this.log.error(`Status failed with error: ${error.code || error.response.status}`);
       }
-    } catch (error: any) {
-      this.log.error(`Status failed with error: ${error.code || error.response.status}`);
+    } else {
+      await once(this, 'updated');
+      return this.info;
     }
   }
 
@@ -125,7 +131,7 @@ export class Vehicle {
       };
 
       if (options.headers) {
-        options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+        options.headers['Application-Id'] = this.applicationId;
         options.headers['auth-token'] = this.config.access_token;
       }
       const result = await axios(options);
@@ -160,7 +166,7 @@ export class Vehicle {
     };
 
     if (options.headers) {
-      options.headers['Application-Id'] = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+      options.headers['Application-Id'] = this.applicationId;
       options.headers['auth-token'] = this.config.access_token;
     }
     const result = await axios(options);
