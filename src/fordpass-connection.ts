@@ -4,8 +4,6 @@ import axios from 'axios';
 import { FordpassConfig } from './types/config';
 import crypto from 'crypto';
 import base64url from 'base64url';
-import { wrapper } from 'axios-cookiejar-support';
-import { CookieJar } from 'tough-cookie';
 import { URLSearchParams } from 'url';
 
 const vehiclesUrl = 'https://services.cx.ford.com/api/dashboard/v1/users/vehicles';
@@ -17,9 +15,6 @@ const tokenUrl = 'https://sso.ci.ford.com/oidc/endpoint/default/token';
 const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
 const clientId = '9fb503e0-715b-47e8-adfd-ad4b7770f73b';
 const userAgent = 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0';
-
-const jar = new CookieJar();
-const client = wrapper(axios.create({ jar }));
 
 const randomStr = (len: number): string => {
   let result = '';
@@ -119,6 +114,7 @@ export class Connection {
   async auth(): Promise<any> {
     const numOfRedirects = 2;
     const code = randomStr(43);
+    let cookies = undefined;
     const url = `${authorizeUrl}?redirect_uri=fordapp://userauthorized&response_type=code&scope=openid&max_age=3600&client_id=9fb503e0-715b-47e8-adfd-ad4b7770f73b&code_challenge=${codeChallenge(
       code,
     )}&code_challenge_method=S256`;
@@ -133,20 +129,27 @@ export class Connection {
         },
       };
 
+      if (options.headers && cookies) {
+        options.headers.cookie = cookies;
+      }
+
       try {
         // eslint-disable-next-line no-await-in-loop
-        await client(options);
+        await axios(options);
         throw new Error('Authentication failed');
       } catch (err: any) {
         if (err?.response?.status === 302) {
           nextUrl = err.response.headers.location;
+          cookies = err.response.headers['set-cookie'];
+        } else {
+          this.log.error(`Auth failed with status: ${err.status}`);
         }
       }
     }
-    return this.doLogin(nextUrl, code);
+    return this.doLogin(nextUrl, code, cookies);
   }
 
-  private async doLogin(url: string, code_verifier: string): Promise<any> {
+  private async doLogin(url: string, code_verifier: string, cookies: string | number | boolean): Promise<any> {
     if (!this.config.username || !this.config.password) {
       throw new Error('Username or password is empty in config');
     }
@@ -156,6 +159,7 @@ export class Connection {
       url: url,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
+        cookie: cookies,
         ...headers,
       },
       data: new URLSearchParams({
@@ -167,28 +171,36 @@ export class Connection {
     };
 
     try {
-      await client(options);
+      await axios(options);
       throw new Error('Authentication failed');
     } catch (err: any) {
       if (err?.response?.status === 302) {
         const nextUrl = err.response.headers.location;
-        return this.getAuthorizationCode(nextUrl, code_verifier);
+        const cookies = err.response.headers['set-cookie'];
+        return this.getAuthorizationCode(nextUrl, code_verifier, cookies);
+      } else {
+        this.log.error(`Auth failed with status: ${err.status}`);
       }
     }
   }
 
-  private async getAuthorizationCode(url: string, code_verifier: string): Promise<any> {
+  private async getAuthorizationCode(
+    url: string,
+    code_verifier: string,
+    cookies: string | number | boolean,
+  ): Promise<any> {
     const options: AxiosRequestConfig = {
       method: 'GET',
       maxRedirects: 0,
       url: url,
       headers: {
+        cookie: cookies,
         ...headers,
       },
     };
 
     try {
-      await client(options);
+      await axios(options);
       throw new Error('Authentication failed');
     } catch (err: any) {
       if (err?.response?.status === 302) {
@@ -198,6 +210,8 @@ export class Connection {
         if (code) {
           return this.getAccessToken(code, code_verifier);
         }
+      } else {
+        this.log.error(`Auth failed with status: ${err.status}`);
       }
     }
   }
@@ -221,17 +235,17 @@ export class Connection {
     };
 
     try {
-      const res = await client(options);
+      const res = await axios(options);
       if (res.status === 200 && res.data.access_token) {
         return this.getRefreshToken(res.data.access_token);
       }
     } catch (err: any) {
-      console.error(err);
+      this.log.error(`Auth failed with error: ${err}`);
     }
   }
 
   private async getRefreshToken(access_token: string): Promise<any> {
-    const nextResult = await axios.post(
+    const res = await axios.post(
       catWithCIAccessTokenUrl,
       {
         ciToken: access_token,
@@ -244,12 +258,12 @@ export class Connection {
         },
       },
     );
-    if (nextResult.status === 200 && nextResult.data.access_token) {
-      this.config.access_token = nextResult.data.access_token;
-      this.config.refresh_token = nextResult.data.refresh_token;
-      return nextResult.data;
+    if (res.status === 200 && res.data.access_token) {
+      this.config.access_token = res.data.access_token;
+      this.config.refresh_token = res.data.refresh_token;
+      return res.data;
     } else {
-      this.log.error(`Auth failed with status: ${nextResult.status}`);
+      this.log.error(`Auth failed with status: ${res.status}`);
     }
   }
 }
