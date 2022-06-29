@@ -11,7 +11,7 @@ const defaultHeaders = {
   'User-Agent': 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0',
 };
 
-const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+const defaultAppId = '4f5eebbd-97ba-4ca6-a2d3-1d2d7bfe5a1a';
 const fordAPIUrl = 'https://usapi.cv.ford.com/';
 
 const handleError = function (name: string, status: number, log: Logging): void {
@@ -37,7 +37,7 @@ export class Vehicle extends EventEmitter {
     this.vin = vin;
     this.autoRefresh = config.options?.autoRefresh || false;
     this.refreshRate = config.options?.refreshRate || 180;
-    this.applicationId = config.options?.region || defaultAppId;
+    this.applicationId = defaultAppId;
   }
 
   async status(): Promise<VehicleInfo | undefined> {
