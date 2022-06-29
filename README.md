@@ -36,12 +36,6 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 {
     "username": "YOUR_USERNAME",
     "password": "YOUR_PASSWORD",
-    "vehicles": [
-        {
-            "name": "VEHICLE NAME",
-            "vin": "YOUR_VIN"
-        }
-    ],
     "options": {
         "autoRefresh": false
     },
