@@ -134,12 +134,16 @@ export class Vehicle extends EventEmitter {
         options.headers['Application-Id'] = this.applicationId;
         options.headers['auth-token'] = this.config.access_token;
       }
-      const result = await axios(options);
-      if (result.status !== 200) {
-        handleError('IssueCommand', result.status, this.log);
-        return '';
+      try {
+        const result = await axios(options);
+        if (result.status !== 200) {
+          handleError('IssueCommand', result.status, this.log);
+          return '';
+        }
+        return result.data.commandId;
+      } catch (error: any) {
+        this.log.error(`Command failed with error: ${error.code || error.response.status}`);
       }
-      return result.data.commandId;
     }
     return '';
   }
@@ -169,11 +173,15 @@ export class Vehicle extends EventEmitter {
       options.headers['Application-Id'] = this.applicationId;
       options.headers['auth-token'] = this.config.access_token;
     }
-    const result = await axios(options);
-    if (result.status === 200) {
-      return result.data as CommandStatus;
-    } else {
-      handleError('CommandStatus', result.status, this.log);
+    try {
+      const result = await axios(options);
+      if (result.status === 200) {
+        return result.data as CommandStatus;
+      } else {
+        handleError('CommandStatus', result.status, this.log);
+      }
+    } catch (error: any) {
+      this.log.error(`CommandStatus failed with error: ${error.code || error.response.status}`);
     }
     return;
   }

@@ -245,25 +245,29 @@ export class Connection {
   }
 
   private async getRefreshToken(access_token: string): Promise<any> {
-    const res = await axios.post(
-      catWithCIAccessTokenUrl,
-      {
-        ciToken: access_token,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Application-Id': this.applicationId,
-          ...headers,
+    try {
+      const res = await axios.post(
+        catWithCIAccessTokenUrl,
+        {
+          ciToken: access_token,
         },
-      },
-    );
-    if (res.status === 200 && res.data.access_token) {
-      this.config.access_token = res.data.access_token;
-      this.config.refresh_token = res.data.refresh_token;
-      return res.data;
-    } else {
-      this.log.error(`Auth failed with status: ${res.status}`);
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'Application-Id': this.applicationId,
+            ...headers,
+          },
+        },
+      );
+      if (res.status === 200 && res.data.access_token) {
+        this.config.access_token = res.data.access_token;
+        this.config.refresh_token = res.data.refresh_token;
+        return res.data;
+      } else {
+        this.log.error(`Auth failed with status: ${res.status}`);
+      }
+    } catch (error: any) {
+      this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
     }
   }
 }
