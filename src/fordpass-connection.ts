@@ -1,5 +1,4 @@
 import { Logging } from 'homebridge';
-import querystring from 'querystring';
 import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
 import { FordpassConfig } from './types/config';
@@ -9,11 +8,12 @@ import { wrapper } from 'axios-cookiejar-support';
 import { CookieJar } from 'tough-cookie';
 import { URLSearchParams } from 'url';
 
-const vehiclesUrl = 'https://www.digitalservices.ford.com/fs/api/v2/profile?country=USA&locale=en-us';
+const vehiclesUrl = 'https://services.cx.ford.com/api/dashboard/v1/users/vehicles';
+const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
+const clientId = '9fb503e0-715b-47e8-adfd-ad4b7770f73b';
 const userAgent = 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0';
 const jar = new CookieJar();
 const client = wrapper(axios.create({ jar }));
-const applicationId = '4f5eebbd-97ba-4ca6-a2d3-1d2d7bfe5a1a';
 
 const randomStr = (len: number): string => {
   let result = '';
@@ -40,10 +40,12 @@ const headers = {
 export class Connection {
   private config: FordpassConfig;
   private readonly log: Logging;
+  private applicationId: string;
 
   constructor(config: FordpassConfig, log: Logging) {
     this.config = config;
     this.log = log;
+    this.applicationId = config.options?.region || defaultAppId;
   }
 
   async refreshAuth(): Promise<any> {
@@ -57,7 +59,7 @@ export class Connection {
           {
             headers: {
               'Content-Type': 'application/json',
-              'Application-Id': applicationId,
+              'Application-Id': this.applicationId,
               ...headers,
             },
           },
@@ -109,7 +111,7 @@ export class Connection {
 
   async auth(): Promise<any> {
     const code = randomStr(43);
-    const url = `https://sso.ci.ford.com/v1.0/endpoint/default/authorize?redirect_uri=https%3A%2F%2Fwww.ford.com%2Fsupport%2Fvehicle-dashboard&client_id=2b4c214c-1376-4eb2-9e62-533047cc34bf&response_type=code&state=&scope=openid&login_hint=%7B%22realm%22%20%3A%20%22cloudIdentityRealm%22%7D&code_challenge=${codeChallenge(
+    const url = `https://sso.ci.ford.com/v1.0/endpoint/default/authorize?redirect_uri=fordapp://userauthorized&response_type=code&scope=openid&max_age=3600&client_id=9fb503e0-715b-47e8-adfd-ad4b7770f73b&code_challenge=${codeChallenge(
       code,
     )}&code_challenge_method=S256`;
     const options: AxiosRequestConfig = {
@@ -154,6 +156,9 @@ export class Connection {
   }
 
   async stepThree(url: string, code_verifier: string): Promise<any> {
+    if (!this.config.username || !this.config.password) {
+      throw new Error('Username or password is empty in config');
+    }
     const options: AxiosRequestConfig = {
       method: 'POST',
       maxRedirects: 0,
@@ -162,12 +167,12 @@ export class Connection {
         'Content-Type': 'application/x-www-form-urlencoded',
         ...headers,
       },
-      data: querystring.stringify({
+      data: new URLSearchParams({
         operation: 'verify',
         'login-form-type': 'pwd',
         username: this.config.username,
         password: this.config.password,
-      }),
+      }).toString(),
     };
 
     try {
@@ -214,15 +219,14 @@ export class Connection {
         'Content-Type': 'application/x-www-form-urlencoded',
         ...headers,
       },
-      data: querystring.stringify({
-        client_id: '2b4c214c-1376-4eb2-9e62-533047cc34bf',
+      data: new URLSearchParams({
+        client_id: clientId,
         grant_type: 'authorization_code',
         scope: 'openid',
-        redirect_uri: 'https://www.ford.com/support/vehicle-dashboard',
-        resource: '',
+        redirect_uri: 'fordapp://userauthorized',
         code: code,
         code_verifier: code_verifier,
-      }),
+      }).toString(),
     };
 
     try {
@@ -244,7 +248,7 @@ export class Connection {
       {
         headers: {
           'Content-Type': 'application/json',
-          'Application-Id': applicationId,
+          'Application-Id': this.applicationId,
           ...headers,
         },
       },
