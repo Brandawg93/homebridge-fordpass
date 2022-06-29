@@ -119,8 +119,12 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         if (lockStatus === 'LOCKED') {
           lockNumber = hap.Characteristic.LockTargetState.SECURED;
         }
+
         callback(undefined, lockNumber);
 
+        if (!this.config.access_token) {
+          return;
+        }
         const status = await vehicle.status();
         if (status) {
           let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
@@ -151,6 +155,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         // Return cached value immediately then update properly
         const engineStatus = vehicle?.info?.remoteStartStatus.value || 0;
         callback(undefined, engineStatus);
+
+        if (!this.config.access_token) {
+          return;
+        }
         const status = await vehicle.status();
         if (status) {
           let started = false;
@@ -179,6 +187,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
           level = 0;
         }
         callback(undefined, level);
+
+        if (!this.config.access_token) {
+          return;
+        }
         const status = await vehicle.status();
         if (status) {
           const fuel = status.fuel?.fuelLevel;
