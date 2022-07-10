@@ -75,8 +75,11 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       chargingService.getCharacteristic(hap.Characteristic.ProgrammableSwitchEvent).setProps({
         maxValue: hap.Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS,
       });
+      
+      const plugService = fordAccessory.createService(hap.Service.OccupancySensor);
     } else {
       fordAccessory.removeService(hap.Service.StatelessProgrammableSwitch);
+      fordAccessory.removeService(hap.Service.OccupancySensor);
     }
 
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
@@ -328,6 +331,11 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
         const switchService = accessory.getService(hap.Service.Switch);
         switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
+
+		const plugService = accessory.getService(hap.Service.OccupancySensor);
+		plugService && plugService.updateCharacteristic(hap.Characteristic.OccupancyDetected,
+			status?.plugStatus?.value ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
+				                          : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED);
 
         if (
           this.config.options?.chargingSwitch &&
