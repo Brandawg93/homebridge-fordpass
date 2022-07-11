@@ -77,7 +77,6 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       });
     } else {
       fordAccessory.removeService(hap.Service.StatelessProgrammableSwitch);
-      fordAccessory.removeService(hap.Service.OccupancySensor);
     }
 
     fordAccessory.createService(hap.Service.OccupancySensor);
