@@ -60,7 +60,7 @@ export class Vehicle extends EventEmitter {
     }
 
     if (!this.updating) {
-       this.updating = true;
+      this.updating = true;
       try {
         const result = await axios(options);
         if (result.status === 200 && result.data.status === 200) {
@@ -75,8 +75,8 @@ export class Vehicle extends EventEmitter {
         this.log.error(`Status failed with error: ${error.code || error.response.status}`);
       } finally {
         this.updating = false;
-		this.emit('updated');
-	  }
+        this.emit('updated');
+      }
     } else {
       await once(this, 'updated');
       return this.info;
