@@ -60,24 +60,23 @@ export class Vehicle extends EventEmitter {
     }
 
     if (!this.updating) {
+       this.updating = true;
       try {
-        this.updating = true;
         const result = await axios(options);
         if (result.status === 200 && result.data.status === 200) {
           this.info = result.data.vehiclestatus as VehicleInfo;
-          this.updating = false;
-          this.emit('updated');
           return this.info;
         } else if (result.data.status === 401) {
           this.log.error(`You do not have authorization to access ${this.name}.`);
         } else {
           handleError('Status', result.data.status, this.log);
         }
-        this.updating = false;
-        this.emit('updated');
       } catch (error: any) {
         this.log.error(`Status failed with error: ${error.code || error.response.status}`);
-      }
+      } finally {
+        this.updating = false;
+		this.emit('updated');
+	  }
     } else {
       await once(this, 'updated');
       return this.info;
