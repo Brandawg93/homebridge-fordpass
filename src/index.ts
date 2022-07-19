@@ -71,15 +71,16 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     );
 
     if (this.config.options?.chargingSwitch) {
-      const chargingService = fordAccessory.createService(hap.Service.StatelessProgrammableSwitch);
-      chargingService.getCharacteristic(hap.Characteristic.ProgrammableSwitchEvent).setProps({
-        maxValue: hap.Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS,
-      });
+      fordAccessory.createService(hap.Service.OccupancySensor, 'Charging');
     } else {
-      fordAccessory.removeService(hap.Service.StatelessProgrammableSwitch);
+      fordAccessory.removeService(hap.Service.OccupancySensor, 'Charging');
     }
 
-    fordAccessory.createService(hap.Service.OccupancySensor);
+    if (this.config.options?.plugSwitch) {
+      fordAccessory.createService(hap.Service.OccupancySensor, 'Plug');
+    } else {
+      fordAccessory.removeService(hap.Service.OccupancySensor, 'Plug');
+    }
 
     lockService.setCharacteristic(hap.Characteristic.LockCurrentState, defaultState);
 
@@ -269,18 +270,18 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   async addVehicles(connection: Connection): Promise<void> {
     const vehicles = await connection.getVehicles();
     vehicles?.forEach(async (vehicle: VehicleConfig) => {
-      vehicle.vin = vehicle.vin.toUpperCase();
-      const name = vehicle.nickName || vehicle.vehicleType;
-      const uuid = hap.uuid.generate(vehicle.vin);
+      vehicle.VIN = vehicle.VIN.toUpperCase();
+      const name = vehicle.nickName || vehicle.model;
+      const uuid = hap.uuid.generate(vehicle.VIN);
       const accessory = new Accessory(name, uuid);
       accessory.context.name = name;
-      accessory.context.vin = vehicle.vin;
+      accessory.context.vin = vehicle.VIN;
 
       const accessoryInformation = accessory.getService(hap.Service.AccessoryInformation);
       if (accessoryInformation) {
         accessoryInformation.setCharacteristic(hap.Characteristic.Manufacturer, 'Ford');
         accessoryInformation.setCharacteristic(hap.Characteristic.Model, name);
-        accessoryInformation.setCharacteristic(hap.Characteristic.SerialNumber, vehicle.vin);
+        accessoryInformation.setCharacteristic(hap.Characteristic.SerialNumber, vehicle.VIN);
       }
 
       // Only add new cameras that are not cached
@@ -293,7 +294,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
     // Remove vehicles that were removed from config
     this.accessories.forEach((accessory: PlatformAccessory<Record<string, string>>) => {
-      if (!vehicles?.find((x: VehicleConfig) => x.vin === accessory.context.vin)) {
+      if (!vehicles?.find((x: VehicleConfig) => x.VIN === accessory.context.vin)) {
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         const index = this.accessories.indexOf(accessory);
         if (index > -1) {
@@ -331,7 +332,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         const switchService = accessory.getService(hap.Service.Switch);
         switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
 
-        const plugService = accessory.getService(hap.Service.OccupancySensor);
+        const plugService = accessory.getServiceById(hap.Service.OccupancySensor, 'Plug');
         plugService &&
           plugService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
@@ -340,21 +341,14 @@ class FordPassPlatform implements DynamicPlatformPlugin {
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
 
-        if (
-          this.config.options?.chargingSwitch &&
-          status?.chargingStatus?.value === 'ChargingAC' &&
-          !accessory.context.charge
-        ) {
-          const chargingService = accessory.getService(hap.Service.StatelessProgrammableSwitch);
-          chargingService &&
-            chargingService.updateCharacteristic(
-              hap.Characteristic.ProgrammableSwitchEvent,
-              hap.Characteristic.ProgrammableSwitchEvent.SINGLE_PRESS,
-            );
-          accessory.context.charge = true;
-        } else if (accessory.context.charge) {
-          accessory.context.charge = false;
-        }
+        const chargingService = accessory.getServiceById(hap.Service.OccupancySensor, 'Charging');
+        chargingService &&
+          chargingService.updateCharacteristic(
+            hap.Characteristic.OccupancyDetected,
+            status?.chargingStatus?.value === 'ChargingAC'
+              ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
+              : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
+          );
       }
     });
   }

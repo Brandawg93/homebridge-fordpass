@@ -58,6 +58,12 @@
           "description": "Adds a button that can trigger automations when your electric vehicle begins charging.",
           "type": "boolean",
           "default": false
+        },
+        "plugSwitch": {
+          "title": "Plug Switch",
+          "description": "Adds an occupancy sensor that can trigger automations when your electric vehicle is plugged into the charging port.",
+          "type": "boolean",
+          "default": false
         }
       }
     }

@@ -6,12 +6,13 @@ interface Options {
   autoRefresh?: boolean;
   refreshRate?: number;
   chargingSwitch?: boolean;
+  plugSwitch?: boolean;
 }
 
 export interface VehicleConfig {
   nickName: string;
-  vehicleType: string;
-  vin: string;
+  model: string;
+  VIN: string;
 }
 
 export interface FordpassConfig extends PlatformConfig {

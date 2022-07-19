@@ -1,12 +1,14 @@
 import { Logging } from 'homebridge';
 import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
-import { FordpassConfig } from './types/config';
+import { FordpassConfig, VehicleConfig } from './types/config';
 import crypto from 'crypto';
 import base64url from 'base64url';
 import { URLSearchParams } from 'url';
+import { User } from './types/user';
 
-const vehiclesUrl = 'https://services.cx.ford.com/api/dashboard/v1/users/vehicles';
+const vehiclesUrl = 'https://api.mps.ford.com/api/expdashboard/v1/details';
+const userUrl = 'https://usapi.cv.ford.com/api/users';
 const catWithRefreshTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-refresh-token';
 const catWithCIAccessTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-ci-access-token';
 const authorizeUrl = 'https://sso.ci.ford.com/v1.0/endpoint/default/authorize';
@@ -82,13 +84,13 @@ export class Connection {
     }
   }
 
-  async getVehicles(): Promise<Array<any>> {
+  async getUser(): Promise<User | undefined> {
     if (!this.config.access_token) {
-      return [];
+      return;
     }
     const options: AxiosRequestConfig = {
       method: 'GET',
-      url: vehiclesUrl,
+      url: userUrl,
       headers: {
         'Content-Type': 'application/json',
         'Auth-Token': this.config.access_token,
@@ -100,7 +102,51 @@ export class Connection {
     try {
       const result = await axios(options);
       if (result.status === 200 && result.data) {
-        return result.data;
+        return result.data.profile as User;
+      } else {
+        this.log.error(`User failed with status: ${result.status}`);
+      }
+      return;
+    } catch (error: any) {
+      this.log.error(`User failed with error: ${error.code || error.response.status}`);
+      return;
+    }
+  }
+
+  async getVehicles(): Promise<Array<VehicleConfig>> {
+    const user = await this.getUser();
+
+    if (!this.config.access_token || !user) {
+      return [];
+    }
+
+    const options: AxiosRequestConfig = {
+      method: 'POST',
+      url: vehiclesUrl,
+      headers: {
+        'Content-Type': 'application/json',
+        'Auth-Token': this.config.access_token,
+        'Application-Id': this.applicationId,
+        locale: user.language,
+        countryCode: user.country,
+        ...headers,
+      },
+      data: JSON.stringify({
+        dashboardRefreshRequest: 'All',
+      }),
+    };
+
+    try {
+      const result = await axios(options);
+      if (result.status < 300 && result.data) {
+        const vehicles: Array<VehicleConfig> = [];
+        for (const info of result.data.userVehicles.vehicleDetails) {
+          vehicles.push(info);
+        }
+        for (let vehicle of vehicles) {
+          vehicle = { ...vehicle, ...result.data.vehicleProfile.find((v: any) => v.VIN === vehicle.VIN) };
+        }
+        return vehicles as Array<VehicleConfig>;
       } else {
         this.log.error(`Vehicles failed with status: ${result.status}`);
       }
