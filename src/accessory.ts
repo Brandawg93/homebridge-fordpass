@@ -25,7 +25,12 @@ export class FordpassAccessory {
         : this.accessory.addService(serviceType, this.accessory.displayName));
     return service;
   }
-
+  
+  findService(serviceType: ServiceType, name?: string): Service | undefined {
+	return name ? this.accessory.getServiceById(serviceType, `${this.accessory.displayName} ${name}`) 
+		: this.accessory.getService(serviceType);
+  }
+  
   getServicesByType(serviceType: ServiceType): Array<Service> {
     return this.accessory.services.filter((x) => x.UUID === serviceType.UUID);
   }

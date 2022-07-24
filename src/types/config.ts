@@ -12,6 +12,8 @@ interface Options {
 export interface VehicleConfig {
   nickName: string;
   model: string;
+  year: number;
+  make: string;
   VIN: string;
 }
 

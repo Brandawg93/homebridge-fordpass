@@ -141,12 +141,11 @@ export class Connection {
       if (result.status < 300 && result.data) {
         const vehicles: Array<VehicleConfig> = [];
         for (const info of result.data.userVehicles.vehicleDetails) {
-          vehicles.push(info);
+          vehicles.push({...info, ...result.data.vehicleProfile.find((v: any) => v.VIN === info.VIN)});
         }
-        for (let vehicle of vehicles) {
-          vehicle = { ...vehicle, ...result.data.vehicleProfile.find((v: any) => v.VIN === vehicle.VIN) };
-        }
-        return vehicles as Array<VehicleConfig>;
+
+		this.log.debug(`Found vehicles : ${JSON.stringify(vehicles, null, 2)}`);
+        return vehicles;
       } else {
         this.log.error(`Vehicles failed with status: ${result.status}`);
       }

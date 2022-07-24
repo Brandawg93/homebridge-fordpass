@@ -271,7 +271,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const vehicles = await connection.getVehicles();
     vehicles?.forEach(async (vehicle: VehicleConfig) => {
       vehicle.VIN = vehicle.VIN.toUpperCase();
-      const name = vehicle.nickName || vehicle.model;
+      const name = vehicle.nickName || (vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model);
       const uuid = hap.uuid.generate(vehicle.VIN);
       const accessory = new Accessory(name, uuid);
       accessory.context.name = name;
@@ -309,6 +309,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     this.vehicles.forEach(async (vehicle: Vehicle) => {
       const status = await vehicle.status();
       this.log.debug(`Updating info for ${vehicle.name}`);
+      this.log.debug(`Vehicle Status : ${JSON.stringify(status, null, 2)}`);
+      
       const lockStatus = status?.lockStatus.value;
       let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;
       if (lockStatus === 'LOCKED') {
@@ -324,15 +326,19 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       const accessory = this.accessories.find((x: PlatformAccessory) => x.UUID === uuid);
 
       if (accessory) {
+		let fordAccessory = new FordpassAccessory(accessory);
+        
         if (!this.pendingLockUpdate) {
-          const lockService = accessory.getService(hap.Service.LockMechanism);
+          const lockService = fordAccessory.findService(hap.Service.LockMechanism);
           lockService && lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
           lockService && lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
         }
-        const switchService = accessory.getService(hap.Service.Switch);
+        const switchService = fordAccessory.findService(hap.Service.Switch);
         switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
-
-        const plugService = accessory.getServiceById(hap.Service.OccupancySensor, 'Plug');
+		
+		
+	
+        const plugService = fordAccessory.findService(hap.Service.OccupancySensor, 'Plug');
         plugService &&
           plugService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
@@ -341,7 +347,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
 
-        const chargingService = accessory.getServiceById(hap.Service.OccupancySensor, 'Charging');
+        const chargingService = fordAccessory.findService(hap.Service.OccupancySensor, 'Charging');
         chargingService &&
           chargingService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
@@ -349,7 +355,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
               ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
-      }
+      } else {
+	    this.log.warn(`Accessory not found for ${vehicle.name}`);
+	  }
     });
   }
 
