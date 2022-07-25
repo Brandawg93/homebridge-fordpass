@@ -271,7 +271,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const vehicles = await connection.getVehicles();
     vehicles?.forEach(async (vehicle: VehicleConfig) => {
       vehicle.VIN = vehicle.VIN.toUpperCase();
-      const name = vehicle.nickName || (vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model);
+      const name = vehicle.nickName || vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model;
       const uuid = hap.uuid.generate(vehicle.VIN);
       const accessory = new Accessory(name, uuid);
       accessory.context.name = name;
@@ -310,7 +310,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       const status = await vehicle.status();
       this.log.debug(`Updating info for ${vehicle.name}`);
       this.log.debug(`Vehicle Status : ${JSON.stringify(status, null, 2)}`);
-      
+
       const lockStatus = status?.lockStatus.value;
       let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;
       if (lockStatus === 'LOCKED') {
@@ -326,8 +326,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       const accessory = this.accessories.find((x: PlatformAccessory) => x.UUID === uuid);
 
       if (accessory) {
-		let fordAccessory = new FordpassAccessory(accessory);
-        
+        const fordAccessory = new FordpassAccessory(accessory);
+
         if (!this.pendingLockUpdate) {
           const lockService = fordAccessory.findService(hap.Service.LockMechanism);
           lockService && lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
@@ -335,9 +335,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
         const switchService = fordAccessory.findService(hap.Service.Switch);
         switchService && switchService.updateCharacteristic(hap.Characteristic.On, started);
-		
-		
-	
+
         const plugService = fordAccessory.findService(hap.Service.OccupancySensor, 'Plug');
         plugService &&
           plugService.updateCharacteristic(
@@ -356,8 +354,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
       } else {
-	    this.log.warn(`Accessory not found for ${vehicle.name}`);
-	  }
+        this.log.warn(`Accessory not found for ${vehicle.name}`);
+      }
     });
   }
 
