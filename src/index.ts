@@ -308,16 +308,19 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   async updateVehicles(): Promise<void> {
     this.vehicles.forEach(async (vehicle: Vehicle) => {
       const status = await vehicle.status();
+      if (!status) {
+        return;
+      }
       this.log.debug(`Updating info for ${vehicle.name}`);
       this.log.debug(`Vehicle Status : ${JSON.stringify(status, null, 2)}`);
 
-      const lockStatus = status?.lockStatus.value;
+      const lockStatus = status.lockStatus.value;
       let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;
       if (lockStatus === 'LOCKED') {
         lockNumber = hap.Characteristic.LockCurrentState.SECURED;
       }
 
-      const engineStatus = status?.remoteStartStatus.value || 0;
+      const engineStatus = status.remoteStartStatus.value || 0;
       let started = false;
       if (engineStatus > 0) {
         started = true;

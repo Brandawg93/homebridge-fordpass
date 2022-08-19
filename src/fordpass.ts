@@ -72,7 +72,9 @@ export class Vehicle extends EventEmitter {
           handleError('Status', result.data.status, this.log);
         }
       } catch (error: any) {
-        this.log.error(`Status failed with error: ${error.code || error.response.status}`);
+        if (error.code !== 'ETIMEDOUT') {
+          this.log.error(`Status failed with error: ${error.code || error.response.status}`);
+        }
       } finally {
         this.updating = false;
         this.emit('updated');
