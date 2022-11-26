@@ -19,6 +19,9 @@ Control your Ford vehicle in HomeKit using [Homebridge](https://github.com/nfari
 [![npm (tag)](https://img.shields.io/npm/v/homebridge-fordpass/test?logo=npm)](https://www.npmjs.com/package/homebridge-fordpass/v/test)
 [![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/brandawg93/homebridge-fordpass/latest?logo=github)](https://github.com/Brandawg93/homebridge-fordpass/releases/latest)
 
+## WARNING
+Ford is locking accounts of users who use this plug-in. See #196 for more info. 
+
 ## Prerequisites
 Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/fordpass/fordpass-sync-connect.html). Download the app or contact your local dealer to see if your vehicle is compatible with FordPass Connect.
 
