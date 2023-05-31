@@ -8,7 +8,7 @@ import { URLSearchParams } from 'url';
 import { User } from './types/user';
 
 const vehiclesUrl = 'https://api.mps.ford.com/api/expdashboard/v1/details';
-const userUrl = 'https://usapi.cv.ford.com/api/users';
+const userUrl = 'https://api.mps.ford.com/api/users';
 const catWithRefreshTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-refresh-token';
 const catWithCIAccessTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-ci-access-token';
 const authorizeUrl = 'https://sso.ci.ford.com/v1.0/endpoint/default/authorize';
