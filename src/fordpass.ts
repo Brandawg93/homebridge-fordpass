@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { AxiosRequestConfig, Method } from 'axios';
+import { AxiosRequestConfig } from 'axios';
 import { Logging } from 'homebridge';
 import { VehicleInfo, Command } from './types/vehicle';
 import { CommandStatus } from './types/command';
@@ -12,7 +12,8 @@ const defaultHeaders = {
 };
 
 const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
-const fordAPIUrl = 'https://usapi.cv.ford.com/';
+const fordAPIUrl = 'https://api.autonomic.ai/v1beta/telemetry/sources/fordpass/vehicles/';
+const commandUrl = 'https://api.autonomic.ai/v1/command/vehicles/';
 
 const handleError = function (name: string, status: number, log: Logging): void {
   log.error(`${name} failed with status: ${status}`);
@@ -41,39 +42,34 @@ export class Vehicle extends EventEmitter {
   }
 
   async status(): Promise<VehicleInfo | undefined> {
-    if (!this.config.access_token) {
+    if (!this.config.autonomic_token) {
       return;
     }
 
-    const url = fordAPIUrl + `/api/vehicles/v5/${this.vin}/status`;
+    const url = fordAPIUrl + this.vin;
     const options: AxiosRequestConfig = {
       url: url,
       headers: defaultHeaders,
-      params: {
-        lrdt: '01-01-1970 00:00:00',
-      },
     };
 
     if (options.headers) {
       options.headers['Application-Id'] = this.applicationId;
-      options.headers['auth-token'] = this.config.access_token;
+      options.headers.Authorization = `Bearer ${this.config.autonomic_token}`;
     }
 
     if (!this.updating) {
       this.updating = true;
       try {
         const result = await axios(options);
-        if (result.status === 200 && result.data.status === 200) {
-          this.info = result.data.vehiclestatus as VehicleInfo;
+        if (result.status === 200) {
+          this.info = result.data.metrics as VehicleInfo;
           return this.info;
-        } else if (result.data.status === 401) {
-          this.log.error(`You do not have authorization to access ${this.name}.`);
-        } else {
-          handleError('Status', result.data.status, this.log);
         }
       } catch (error: any) {
         if (error.code !== 'ETIMEDOUT') {
           this.log.error(`Status failed with error: ${error.code || error.response.status}`);
+        } else {
+          handleError('Status', error.status, this.log);
         }
       } finally {
         this.updating = false;
@@ -86,35 +82,29 @@ export class Vehicle extends EventEmitter {
   }
 
   async issueCommand(command: Command): Promise<string> {
-    if (!this.config.access_token) {
+    if (!this.config.autonomic_token) {
       return '';
     }
-    let method: Method = 'GET';
-    let endpoint = '';
+    let type = '';
     switch (command) {
       case Command.START: {
-        method = 'PUT';
-        endpoint = `api/vehicles/v5/${this.vin}/engine/start`;
+        type = 'remoteStart';
         break;
       }
       case Command.STOP: {
-        method = 'DELETE';
-        endpoint = `api/vehicles/v5/${this.vin}/engine/start`;
+        type = 'cancelRemoteStart';
         break;
       }
       case Command.LOCK: {
-        method = 'PUT';
-        endpoint = `api/vehicles/v5/${this.vin}/doors/lock`;
+        type = 'lock';
         break;
       }
       case Command.UNLOCK: {
-        method = 'DELETE';
-        endpoint = `api/vehicles/v5/${this.vin}/doors/lock`;
+        type = 'unlock';
         break;
       }
       case Command.REFRESH: {
-        method = 'PUT';
-        endpoint = `api/vehicles/v5/${this.vin}/status`;
+        type = 'statusRefresh';
         break;
       }
       default: {
@@ -123,25 +113,31 @@ export class Vehicle extends EventEmitter {
       }
     }
 
-    if (endpoint) {
-      const url = fordAPIUrl + endpoint;
+    if (type) {
+      const url = commandUrl + this.vin + '/commands';
       const options: AxiosRequestConfig = {
-        method: method,
+        method: 'POST',
         url: url,
         headers: defaultHeaders,
+        data: {
+          properties: {},
+          tags: {},
+          type: type,
+          wakeUp: true,
+        },
       };
 
       if (options.headers) {
         options.headers['Application-Id'] = this.applicationId;
-        options.headers['auth-token'] = this.config.access_token;
+        options.headers.Authorization = `Bearer ${this.config.autonomic_token}`;
       }
       try {
         const result = await axios(options);
-        if (result.status !== 200) {
+        if (result.status < 200 && result.status > 299) {
           handleError('IssueCommand', result.status, this.log);
           return '';
         }
-        return result.data.commandId;
+        return result.data.id;
       } catch (error: any) {
         this.log.error(`Command failed with error: ${error.code || error.response.status}`);
       }
@@ -149,38 +145,24 @@ export class Vehicle extends EventEmitter {
     return '';
   }
 
-  async commandStatus(command: Command, commandId: string): Promise<CommandStatus | undefined> {
-    if (!this.config.access_token) {
+  async commandStatus(commandId: string): Promise<CommandStatus | undefined> {
+    if (!this.config.autonomic_token) {
       return;
     }
-    let endpoint = '';
-    if (command === Command.START || command === Command.STOP) {
-      endpoint = `api/vehicles/v5/${this.vin}/engine/start/${commandId}`;
-    } else if (command === Command.LOCK || command === Command.UNLOCK) {
-      endpoint = `api/vehicles/v5/${this.vin}/doors/lock/${commandId}`;
-    } else if (command === Command.REFRESH) {
-      endpoint = `api/vehicles/v5/${this.vin}/status/${commandId}`;
-    } else {
-      this.log.error('invalid command');
-    }
-    const url = fordAPIUrl + endpoint;
+    const url = commandUrl + this.vin + '/commands/' + commandId;
     const options: AxiosRequestConfig = {
-      baseURL: fordAPIUrl,
+      method: 'GET',
       url: url,
       headers: defaultHeaders,
     };
 
     if (options.headers) {
       options.headers['Application-Id'] = this.applicationId;
-      options.headers['auth-token'] = this.config.access_token;
+      options.headers.Authorization = `Bearer ${this.config.autonomic_token}`;
     }
     try {
       const result = await axios(options);
-      if (result.status === 200) {
-        return result.data as CommandStatus;
-      } else {
-        handleError('CommandStatus', result.status, this.log);
-      }
+      return result.data as CommandStatus;
     } catch (error: any) {
       this.log.error(`CommandStatus failed with error: ${error.code || error.response.status}`);
     }

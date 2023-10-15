@@ -22,5 +22,6 @@ export interface FordpassConfig extends PlatformConfig {
   password?: string;
   options?: Options;
   access_token?: string;
+  autonomic_token?: string;
   refresh_token?: string;
 }

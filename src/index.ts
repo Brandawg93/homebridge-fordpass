@@ -101,8 +101,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         const self = this;
         const interval = setInterval(async () => {
           if (tries > 0) {
-            const status = await vehicle.commandStatus(command, commandId);
-            if (status?.status === 200) {
+            const status = await vehicle.commandStatus(commandId);
+            if (status?.currentStatus === 'SUCCESS') {
               lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, value);
               self.pendingLockUpdate = false;
               clearInterval(interval);
@@ -112,13 +112,13 @@ class FordPassPlatform implements DynamicPlatformPlugin {
             self.pendingLockUpdate = false;
             clearInterval(interval);
           }
-        }, 1000);
+        }, 3000);
         callback(undefined, value);
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
         let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
-        const lockStatus = vehicle?.info?.lockStatus.value;
+        const lockStatus = vehicle?.info?.doorLockStatus.value || 'LOCKED';
         if (lockStatus === 'LOCKED') {
           lockNumber = hap.Characteristic.LockTargetState.SECURED;
         }
@@ -131,7 +131,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         const status = await vehicle.status();
         if (status) {
           let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
-          const lockStatus = status.lockStatus.value;
+          const lockStatus = status.doorLockStatus.value;
           if (lockStatus === 'LOCKED') {
             lockNumber = hap.Characteristic.LockTargetState.SECURED;
           }
@@ -156,7 +156,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const engineStatus = vehicle?.info?.remoteStartStatus.value || 0;
+        const engineStatus = vehicle?.info?.ignitionStatus.value || 'OFF';
         callback(undefined, engineStatus);
 
         if (!this.config.access_token) {
@@ -164,10 +164,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
         const status = await vehicle.status();
         if (status) {
-          let started = false;
-          const engineStatus = status.remoteStartStatus.value || 0;
-          if (engineStatus > 0) {
-            started = true;
+          let started = true;
+          const engineStatus = status.ignitionStatus.value;
+          if (engineStatus === 'OFF') {
+            started = false;
           }
           switchService.updateCharacteristic(hap.Characteristic.On, started);
         } else {
@@ -180,7 +180,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const fuel = vehicle?.info?.fuel?.fuelLevel;
+        const fuel = vehicle?.info?.fuelLevel?.value;
         const battery = vehicle?.info?.batteryFillLevel?.value;
         let level = fuel || battery || 100;
         if (level > 100) {
@@ -196,7 +196,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
         const status = await vehicle.status();
         if (status) {
-          const fuel = status.fuel?.fuelLevel;
+          const fuel = status.fuelLevel?.value;
           const battery = status.batteryFillLevel?.value;
           const chargingStatus = vehicle?.info?.chargingStatus?.value;
           let level = fuel || battery || 100;
@@ -314,16 +314,16 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       this.log.debug(`Updating info for ${vehicle.name}`);
       this.log.debug(`Vehicle Status : ${JSON.stringify(status, null, 2)}`);
 
-      const lockStatus = status.lockStatus.value;
+      const lockStatus = status.doorLockStatus.value;
       let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;
       if (lockStatus === 'LOCKED') {
         lockNumber = hap.Characteristic.LockCurrentState.SECURED;
       }
 
-      const engineStatus = status.remoteStartStatus.value || 0;
-      let started = false;
-      if (engineStatus > 0) {
-        started = true;
+      const engineStatus = status.ignitionStatus.value;
+      let started = true;
+      if (engineStatus === 'OFF') {
+        started = false;
       }
       const uuid = hap.uuid.generate(vehicle.vin);
       const accessory = this.accessories.find((x: PlatformAccessory) => x.UUID === uuid);

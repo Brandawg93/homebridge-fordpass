@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge FordPass",
   "name": "homebridge-fordpass",
-  "version": "1.8.3",
+  "version": "1.9.0-test.0",
   "description": "Fordpass plugin for homebridge: https://homebridge.io/",
   "main": "dist/index.js",
   "license": "GPL-3.0",

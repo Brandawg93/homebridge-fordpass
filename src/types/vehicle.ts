@@ -4,23 +4,21 @@ interface Base {
 }
 
 interface Status extends Base {
+  updateTime: string;
+  oemCorrelationId: string;
   value: string;
 }
 
 interface Fuel extends Base {
-  fuelLevel: number;
-  distanceToEmpty: number;
+  updateTime: string;
+  oemCorrelationId: string;
+  value: number;
 }
 
 interface GPS extends Base {
   latitude: string;
   longitude: string;
   gpsState: string;
-}
-
-interface RemoteStart extends Base {
-  remoteStartDuration: number;
-  remoteStartTime: number;
 }
 
 interface RemoteStartStatus {
@@ -51,14 +49,12 @@ export enum Command {
 
 export interface VehicleInfo {
   vin: string;
-  lockStatus: Status;
+  doorLockStatus: Status;
   alarm: Status;
   PrmtAlarmEvent: Status;
   odometer: Status;
-  fuel?: Fuel;
+  fuelLevel?: Fuel;
   gps: GPS;
-  remoteStart: RemoteStart;
-  remoteStartStatus: RemoteStartStatus;
   battery: Battery;
   oil: Oil;
   tirePressure: Status;

@@ -1,13 +1,19 @@
-interface EventData {
+interface Target {
   $id: string;
   warning: number;
   DoorStatuses: any;
 }
 
 export interface CommandStatus {
-  $id: string;
-  eventData: EventData;
-  errorDetailCode: any;
-  status: number;
-  version: string;
+  id: string;
+  target: Target;
+  type: string;
+  currentStatus: string;
+  previousStatus: string;
+  statusReason: string;
+  createTime: string;
+  updateTime: string;
+  expireTime: string;
+  metrics: any;
+  wakeUp: boolean;
 }

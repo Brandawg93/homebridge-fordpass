@@ -13,6 +13,7 @@ const catWithRefreshTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-r
 const catWithCIAccessTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-ci-access-token';
 const authorizeUrl = 'https://sso.ci.ford.com/v1.0/endpoint/default/authorize';
 const tokenUrl = 'https://sso.ci.ford.com/oidc/endpoint/default/token';
+const autonomicUrl = 'https://accounts.autonomic.ai/v1/auth/oidc/token';
 
 const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
 const clientId = '9fb503e0-715b-47e8-adfd-ad4b7770f73b';
@@ -70,7 +71,7 @@ export class Connection {
         if (result.status === 200 && result.data.access_token) {
           this.config.access_token = result.data.access_token;
           this.config.refresh_token = result.data.refresh_token;
-          return result.data;
+          return this.getAutonomicToken(result.data.access_token);
         } else {
           this.log.error(`Auth failed with status: ${result.status}`);
         }
@@ -307,12 +308,40 @@ export class Connection {
       if (res.status === 200 && res.data.access_token) {
         this.config.access_token = res.data.access_token;
         this.config.refresh_token = res.data.refresh_token;
-        return res.data;
+        return this.getAutonomicToken(res.data.access_token);
       } else {
         this.log.error(`Auth failed with status: ${res.status}`);
       }
     } catch (error: any) {
       this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
+    }
+  }
+
+  private async getAutonomicToken(access_token: string): Promise<any> {
+    const options: AxiosRequestConfig = {
+      method: 'POST',
+      url: autonomicUrl,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        ...headers,
+      },
+      data: new URLSearchParams({
+        client_id: 'fordpass-prod',
+        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+        subject_token: access_token,
+        subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
+        subject_issuer: 'fordpass',
+      }).toString(),
+    };
+
+    try {
+      const res = await axios(options);
+      if (res.status === 200 && res.data.access_token) {
+        this.config.autonomic_token = res.data.access_token;
+        return res.data;
+      }
+    } catch (err: any) {
+      this.log.error(`Auth failed with error: ${err}`);
     }
   }
 }
