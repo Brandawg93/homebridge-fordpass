@@ -118,20 +118,21 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
         let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
-        const lockStatus = vehicle?.info?.doorLockStatus.value || 'LOCKED';
+        const lockStatus =
+          vehicle?.info?.metrics.doorLockStatus.find((x) => x.vehicleDoor === 'ALL_DOORS')?.value || 'LOCKED';
         if (lockStatus === 'LOCKED') {
           lockNumber = hap.Characteristic.LockTargetState.SECURED;
         }
 
         callback(undefined, lockNumber);
 
-        if (!this.config.access_token) {
+        if (!this.config.access_token || !vehicle) {
           return;
         }
         const status = await vehicle.status();
         if (status) {
           let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
-          const lockStatus = status.doorLockStatus.value;
+          const lockStatus = status.metrics.doorLockStatus.find((x) => x.vehicleDoor === 'ALL_DOORS')?.value;
           if (lockStatus === 'LOCKED') {
             lockNumber = hap.Characteristic.LockTargetState.SECURED;
           }
@@ -156,7 +157,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const engineStatus = vehicle?.info?.ignitionStatus.value || 'OFF';
+        const engineStatus = vehicle?.info?.metrics.ignitionStatus.value || 'OFF';
         callback(undefined, engineStatus);
 
         if (!this.config.access_token) {
@@ -165,7 +166,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         const status = await vehicle.status();
         if (status) {
           let started = true;
-          const engineStatus = status.ignitionStatus.value;
+          const engineStatus = status.metrics.ignitionStatus.value;
           if (engineStatus === 'OFF') {
             started = false;
           }
@@ -180,8 +181,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const fuel = vehicle?.info?.fuelLevel?.value;
-        const battery = vehicle?.info?.batteryFillLevel?.value;
+        const fuel = vehicle?.info?.metrics.fuelLevel?.value as number;
+        const battery = vehicle?.info?.metrics.xevBatteryStateOfCharge?.value as number;
         let level = fuel || battery || 100;
         if (level > 100) {
           level = 100;
@@ -196,9 +197,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
         const status = await vehicle.status();
         if (status) {
-          const fuel = status.fuelLevel?.value;
-          const battery = status.batteryFillLevel?.value;
-          const chargingStatus = vehicle?.info?.chargingStatus?.value;
+          const fuel = status.metrics.fuelLevel?.value as number;
+          const battery = status.metrics.xevBatteryStateOfCharge?.value as number;
+          const chargingStatus = vehicle?.info?.metrics.xevBatteryChargeDisplayStatus?.value;
           let level = fuel || battery || 100;
           if (level > 100) {
             level = 100;
@@ -314,13 +315,13 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       this.log.debug(`Updating info for ${vehicle.name}`);
       this.log.debug(`Vehicle Status : ${JSON.stringify(status, null, 2)}`);
 
-      const lockStatus = status.doorLockStatus.value;
+      const lockStatus = status.metrics.doorLockStatus.find((x) => x.vehicleDoor === 'ALL_DOORS')?.value;
       let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;
       if (lockStatus === 'LOCKED') {
         lockNumber = hap.Characteristic.LockCurrentState.SECURED;
       }
 
-      const engineStatus = status.ignitionStatus.value;
+      const engineStatus = status.metrics.ignitionStatus.value;
       let started = true;
       if (engineStatus === 'OFF') {
         started = false;
@@ -343,7 +344,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         plugService &&
           plugService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
-            status?.plugStatus?.value
+            status?.metrics.xevPlugChargerStatus?.value
               ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
@@ -352,7 +353,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         chargingService &&
           chargingService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
-            status?.chargingStatus?.value === 'ChargingAC'
+            status?.metrics.xevBatteryChargeDisplayStatus?.value === 'ChargingAC'
               ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
