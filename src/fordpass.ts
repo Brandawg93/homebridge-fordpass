@@ -5,7 +5,6 @@ import { VehicleInfo, Command } from './types/vehicle';
 import { CommandStatus } from './types/command';
 import { FordpassConfig } from './types/config';
 import { once, EventEmitter } from 'events';
-import { inspect } from 'util';
 
 const defaultHeaders = {
   'Content-Type': 'application/json',
@@ -64,7 +63,6 @@ export class Vehicle extends EventEmitter {
         const result = await axios(options);
         if (result.status === 200) {
           this.info = result.data as VehicleInfo;
-          this.log.debug(inspect(this.info, false, null, true)); // TODO: remove log
           return this.info;
         }
       } catch (error: any) {
