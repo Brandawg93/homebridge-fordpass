@@ -42,8 +42,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       return;
     }
 
-    if (!config.username || !config.password) {
-      this.log.error('Please add a userame and password to your config.json');
+    if (!config.code || !config.client_secret) {
+      this.log.error('Please add a code and client_secret to your config.json.  See README.md for more information.');
       return;
     }
 
@@ -67,16 +67,16 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const switchService = fordAccessory.createService(hap.Service.Switch);
     const batteryService = fordAccessory.createService(
       hap.Service.Battery,
-      this.config.options?.batteryName || 'Fuel Level',
+      this.config.batteryName || 'Fuel Level',
     );
 
-    if (this.config.options?.chargingSwitch) {
+    if (this.config.chargingSwitch) {
       fordAccessory.createService(hap.Service.OccupancySensor, 'Charging');
     } else {
       fordAccessory.removeService(hap.Service.OccupancySensor, 'Charging');
     }
 
-    if (this.config.options?.plugSwitch) {
+    if (this.config.plugSwitch) {
       fordAccessory.createService(hap.Service.OccupancySensor, 'Plug');
     } else {
       fordAccessory.removeService(hap.Service.OccupancySensor, 'Plug');
@@ -88,92 +88,69 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .setCharacteristic(hap.Characteristic.LockTargetState, defaultState)
       .getCharacteristic(hap.Characteristic.LockTargetState)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.log.debug(`${value ? 'Locking' : 'Unlocking'} ${accessory.displayName}`);
-        let commandId = '';
+        this.log.debug(`SET ${value ? 'Locking' : 'Unlocking'} ${accessory.displayName} ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
+        if(value !== (vehicle?.info?.vehicleStatus.lockStatus?.value === 'LOCKED') ? hap.Characteristic.LockTargetState.SECURED : hap.Characteristic.LockTargetState.UNSECURED){
+          this.log.debug('LOCK is already in the requested state');
+          callback();
+          return;
+        }
+        this.log.debug(`SET ${value ? 'Locking' : 'Unlocking'} ${accessory.displayName}`);
         let command = Command.LOCK;
-        if (value === hap.Characteristic.LockTargetState.UNSECURED) {
+        if (value == hap.Characteristic.LockTargetState.UNSECURED) {
           command = Command.UNLOCK;
         }
-        commandId = await vehicle.issueCommand(command);
-
-        let tries = 30;
-        this.pendingLockUpdate = true;
+        // Just call the command and after 5 seconds update the vehicle info
+        await vehicle.issueCommand(command);
+        this.log.debug('Waiting 6 seconds to update vehicle info');
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        this.log.debug('Done waiting...Updating vehicle info');
+        await vehicle.retrieveVehicleInfo();
+        this.log.debug(`Lock status is now: ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
         const self = this;
-        const interval = setInterval(async () => {
-          if (tries > 0) {
-            const status = await vehicle.commandStatus(commandId);
-            if (status?.currentStatus === 'SUCCESS') {
-              lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, value);
-              self.pendingLockUpdate = false;
-              clearInterval(interval);
-            }
-            tries--;
-          } else {
-            self.pendingLockUpdate = false;
-            clearInterval(interval);
-          }
-        }, 3000);
-        callback(undefined, value);
+        callback();
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
         let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
         const lockStatus =
-          vehicle?.info?.metrics.doorLockStatus.find((x) => x.vehicleDoor === 'ALL_DOORS')?.value || 'LOCKED';
+          vehicle?.info?.vehicleStatus.lockStatus?.value || 'LOCKED';
         if (lockStatus === 'LOCKED') {
           lockNumber = hap.Characteristic.LockTargetState.SECURED;
         }
-
         callback(undefined, lockNumber);
 
-        if (!this.config.access_token || !vehicle) {
-          return;
-        }
-        const status = await vehicle.status();
-        if (status) {
-          let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
-          const lockStatus = status.metrics.doorLockStatus.find((x) => x.vehicleDoor === 'ALL_DOORS')?.value;
-          if (lockStatus === 'LOCKED') {
-            lockNumber = hap.Characteristic.LockTargetState.SECURED;
-          }
-          lockService.updateCharacteristic(hap.Characteristic.LockCurrentState, lockNumber);
-          lockService.updateCharacteristic(hap.Characteristic.LockTargetState, lockNumber);
-        } else {
-          self.log.error(`Cannot get information for ${accessory.displayName} lock`);
-        }
       });
 
     switchService
       .setCharacteristic(hap.Characteristic.On, false)
       .getCharacteristic(hap.Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
+        this.log.debug(`SET ${value ? 'Starting' : 'Stopping'} ${accessory.displayName} ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
+        if(value !== (vehicle?.info?.vehicleStatus.ignitionStatus.value === 'ON')){
+          this.log.debug('Engine is already in the requested state');
+          callback();
+          return;
+        }
         this.log.debug(`${value ? 'Starting' : 'Stopping'} ${accessory.displayName}`);
         if (value as boolean) {
           await vehicle.issueCommand(Command.START);
         } else {
           await vehicle.issueCommand(Command.STOP);
         }
-        callback(undefined, value);
+
+        await new Promise(resolve => setTimeout(resolve, 6000));
+        await vehicle.retrieveVehicleInfo();
+        this.log.debug(`Start status is now: ${vehicle?.info?.vehicleStatus.ignitionStatus.value}`);
+        callback();
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const engineStatus = vehicle?.info?.metrics.ignitionStatus.value || 'OFF';
+        const engineStatus = vehicle?.info?.vehicleStatus.ignitionStatus.value || 'OFF';
         callback(undefined, engineStatus);
 
-        if (!this.config.access_token) {
-          return;
-        }
-        const status = await vehicle.status();
-        if (status) {
-          let started = true;
-          const engineStatus = status.metrics.ignitionStatus.value;
-          if (engineStatus === 'OFF') {
-            started = false;
-          }
-          switchService.updateCharacteristic(hap.Characteristic.On, started);
-        } else {
-          self.log.error(`Cannot get information for ${accessory.displayName} engine`);
-        }
+        // switchService.updateCharacteristic(hap.Characteristic.On, engineStatus === 'ON');
+        switchService.getCharacteristic(hap.Characteristic.On).updateValue(engineStatus === 'ON' ? true : false);
+      
       });
 
     batteryService
@@ -181,8 +158,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
-        const fuel = vehicle?.info?.metrics.fuelLevel?.value as number;
-        const battery = vehicle?.info?.metrics.xevBatteryStateOfCharge?.value as number;
+        const fuel = vehicle?.info?.vehicleStatus.fuelLevel?.value as number;
+        const battery = vehicle?.info?.vehicleDetails.batteryChargeLevel?.value as number;
         let level = fuel || battery || 100;
         if (level > 100) {
           level = 100;
@@ -191,55 +168,37 @@ class FordPassPlatform implements DynamicPlatformPlugin {
           level = 0;
         }
         callback(undefined, level);
-
-        if (!this.config.access_token) {
-          return;
-        }
-        const status = await vehicle.status();
-        if (status) {
-          const fuel = status.metrics.fuelLevel?.value as number;
-          const battery = status.metrics.xevBatteryStateOfCharge?.value as number;
-          const chargingStatus = vehicle?.info?.metrics.xevBatteryChargeDisplayStatus?.value;
-          let level = fuel || battery || 100;
-          if (level > 100) {
-            level = 100;
-          }
-          if (level < 0) {
-            level = 0;
-          }
-          batteryService.updateCharacteristic(hap.Characteristic.BatteryLevel, level);
-          if (battery) {
-            if (chargingStatus === 'ChargingAC') {
-              batteryService.updateCharacteristic(
-                hap.Characteristic.ChargingState,
-                hap.Characteristic.ChargingState.CHARGING,
-              );
-            } else {
-              batteryService.updateCharacteristic(
-                hap.Characteristic.ChargingState,
-                hap.Characteristic.ChargingState.NOT_CHARGING,
-              );
-            }
+        const chargingStatus = vehicle?.info?.vehicleStatus.chargingStatus?.value;
+        batteryService.updateCharacteristic(hap.Characteristic.BatteryLevel, level);
+        if (battery) {
+          if (chargingStatus === 'ChargingAC') {
+            batteryService.updateCharacteristic(
+              hap.Characteristic.ChargingState,
+              hap.Characteristic.ChargingState.CHARGING,
+            );
           } else {
             batteryService.updateCharacteristic(
               hap.Characteristic.ChargingState,
-              hap.Characteristic.ChargingState.NOT_CHARGEABLE,
-            );
-          }
-
-          if (level < 10) {
-            batteryService.updateCharacteristic(
-              hap.Characteristic.StatusLowBattery,
-              hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW,
-            );
-          } else {
-            batteryService.updateCharacteristic(
-              hap.Characteristic.StatusLowBattery,
-              hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
+              hap.Characteristic.ChargingState.NOT_CHARGING,
             );
           }
         } else {
-          self.log.error(`Cannot get information for ${accessory.displayName} engine`);
+          batteryService.updateCharacteristic(
+            hap.Characteristic.ChargingState,
+            hap.Characteristic.ChargingState.NOT_CHARGEABLE,
+          );
+        }
+
+        if (level < 10) {
+          batteryService.updateCharacteristic(
+            hap.Characteristic.StatusLowBattery,
+            hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW,
+          );
+        } else {
+          batteryService.updateCharacteristic(
+            hap.Characteristic.StatusLowBattery,
+            hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL,
+          );
         }
       });
     this.vehicles.push(vehicle);
@@ -247,42 +206,44 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   }
 
   async didFinishLaunching(): Promise<void> {
-    const self = this;
     const ford = new Connection(this.config, this.log);
     const authInfo = await ford.auth();
-
     if (authInfo) {
       setInterval(async () => {
-        self.log.debug('Reauthenticating with refresh token');
-        await ford.refreshAuth();
+        this.log.debug('Reauthenticating with refresh token');
+        await ford.getRefreshToken();
       }, authInfo.expires_in * 1000 - 10000);
+
+      this.log.debug('Copy access and refresh tokens to config');
+      this.log.debug(`Access Token: ${authInfo.access_token}`);
+      this.log.debug(`Refresh Token: ${authInfo.refresh_token}`);
 
       await this.addVehicles(ford);
       await this.updateVehicles();
       await this.refreshVehicles();
 
-      // Vehicle info needs to be updated every 15 minutes
+      // Vehicle info needs to be updated every 5 minutes
       setInterval(async () => {
-        await self.updateVehicles();
-      }, 60 * 1000 * 15);
+        await this.updateVehicles();
+      }, 60 * 1000 * 5);
     }
   }
 
   async addVehicles(connection: Connection): Promise<void> {
     const vehicles = await connection.getVehicles();
     vehicles?.forEach(async (vehicle: VehicleConfig) => {
-      vehicle.VIN = vehicle.VIN.toUpperCase();
-      const name = vehicle.nickName || vehicle.year + ' ' + vehicle.make + ' ' + vehicle.model;
-      const uuid = hap.uuid.generate(vehicle.VIN);
+      vehicle.vehicleId = vehicle.vehicleId.toUpperCase();
+      const name = vehicle.nickName || vehicle.modelYear + ' ' + vehicle.make + ' ' + vehicle.modelName;
+      const uuid = hap.uuid.generate(vehicle.vehicleId);
       const accessory = new Accessory(name, uuid);
       accessory.context.name = name;
-      accessory.context.vin = vehicle.VIN;
+      accessory.context.vehicleId = vehicle.vehicleId;
 
       const accessoryInformation = accessory.getService(hap.Service.AccessoryInformation);
       if (accessoryInformation) {
         accessoryInformation.setCharacteristic(hap.Characteristic.Manufacturer, 'Ford');
         accessoryInformation.setCharacteristic(hap.Characteristic.Model, name);
-        accessoryInformation.setCharacteristic(hap.Characteristic.SerialNumber, vehicle.VIN);
+        accessoryInformation.setCharacteristic(hap.Characteristic.SerialNumber, vehicle.vehicleId);
       }
 
       // Only add new cameras that are not cached
@@ -295,7 +256,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
     // Remove vehicles that were removed from config
     this.accessories.forEach((accessory: PlatformAccessory<Record<string, string>>) => {
-      if (!vehicles?.find((x: VehicleConfig) => x.VIN === accessory.context.vin)) {
+      if (!vehicles?.find((x: VehicleConfig) => x.vehicleId === accessory.context.vehicleId)) {
         this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
         const index = this.accessories.indexOf(accessory);
         if (index > -1) {
@@ -308,27 +269,25 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
   async updateVehicles(): Promise<void> {
     this.vehicles.forEach(async (vehicle: Vehicle) => {
-      const status = await vehicle.status();
-      if (!status) {
-        return;
-      }
-      this.log.debug(`Updating info for ${vehicle.name}`);
-      this.log.debug(`Vehicle Status : ${JSON.stringify(status, null, 2)}`);
 
-      const lockStatus = status.metrics.doorLockStatus.find((x) => x.vehicleDoor === 'ALL_DOORS')?.value;
+      const statusReqId = await vehicle.issueCommand(Command.REFRESH);
+      // wait for 10 seconds before updating the vehicle info
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      await vehicle.retrieveVehicleInfo();
+      const status = vehicle?.info?.vehicleStatus;
+      const lockStatus = status?.lockStatus?.value;
       let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;
       if (lockStatus === 'LOCKED') {
         lockNumber = hap.Characteristic.LockCurrentState.SECURED;
       }
 
-      const engineStatus = status.metrics.ignitionStatus.value;
+      const engineStatus = status?.ignitionStatus.value;
       let started = true;
       if (engineStatus === 'OFF') {
         started = false;
       }
-      const uuid = hap.uuid.generate(vehicle.vin);
+      const uuid = hap.uuid.generate(vehicle.vehicleId);
       const accessory = this.accessories.find((x: PlatformAccessory) => x.UUID === uuid);
-
       if (accessory) {
         const fordAccessory = new FordpassAccessory(accessory);
 
@@ -344,16 +303,17 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         plugService &&
           plugService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
-            status?.metrics.xevPlugChargerStatus?.value
+            status?.plugStatus?.value
               ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
 
+        this.log.debug(`Charging status: ${status?.chargingStatus?.value}`);
         const chargingService = fordAccessory.findService(hap.Service.OccupancySensor, 'Charging');
         chargingService &&
           chargingService.updateCharacteristic(
             hap.Characteristic.OccupancyDetected,
-            status?.metrics.xevBatteryChargeDisplayStatus?.value === 'ChargingAC'
+            status?.chargingStatus?.value === 'ChargingAC'
               ? hap.Characteristic.OccupancyDetected.OCCUPANCY_DETECTED
               : hap.Characteristic.OccupancyDetected.OCCUPANCY_NOT_DETECTED,
           );
@@ -365,6 +325,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
   async refreshVehicles(): Promise<void> {
     this.vehicles.forEach(async (vehicle: Vehicle) => {
+      this.log.debug(`Configuring ${vehicle.name} (${this.config.autoRefresh}) to refresh every ${this.config.refreshRate} minutes.`);
       if (vehicle.autoRefresh && vehicle.refreshRate && vehicle.refreshRate > 0) {
         this.log.debug(`Configuring ${vehicle.name} to refresh every ${vehicle.refreshRate} minutes.`);
         setInterval(async () => {

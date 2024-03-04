@@ -1,110 +1,58 @@
-import axios from 'axios';
-import { AxiosRequestConfig } from 'axios';
+
 import { Logging } from 'homebridge';
 import { VehicleInfo, Command } from './types/vehicle';
-import { CommandStatus } from './types/command';
+import { Connection } from './fordpass-connection';
 import { FordpassConfig } from './types/config';
 import { once, EventEmitter } from 'events';
-
-const defaultHeaders = {
-  'Content-Type': 'application/json',
-  'User-Agent': 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0',
-};
-
-const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
-const fordAPIUrl = 'https://api.autonomic.ai/v1beta/telemetry/sources/fordpass/vehicles/';
-const commandUrl = 'https://api.autonomic.ai/v1/command/vehicles/';
-
-const handleError = function (name: string, status: number, log: Logging): void {
-  log.error(`${name} failed with status: ${status}`);
-};
 
 export class Vehicle extends EventEmitter {
   private config: FordpassConfig;
   private readonly log: Logging;
   public info: VehicleInfo | undefined;
-  private applicationId: string;
   private updating = false;
   name: string;
-  vin: string;
+  vehicleId: string;
   autoRefresh: boolean;
   refreshRate: number;
 
-  constructor(name: string, vin: string, config: FordpassConfig, log: Logging) {
+  constructor(name: string, vehicleId: string, config: FordpassConfig, log: Logging) {
     super();
     this.config = config;
     this.log = log;
     this.name = name;
-    this.vin = vin;
-    this.autoRefresh = config.options?.autoRefresh || false;
-    this.refreshRate = config.options?.refreshRate || 180;
-    this.applicationId = config.options?.region || defaultAppId;
-  }
-
-  async status(): Promise<VehicleInfo | undefined> {
-    if (!this.config.autonomic_token) {
-      return;
-    }
-
-    const url = fordAPIUrl + this.vin;
-    const options: AxiosRequestConfig = {
-      url: url,
-      headers: defaultHeaders,
-    };
-
-    if (options.headers) {
-      options.headers['Application-Id'] = this.applicationId;
-      options.headers.Authorization = `Bearer ${this.config.autonomic_token}`;
-    }
-
-    if (!this.updating) {
-      this.updating = true;
-      try {
-        const result = await axios(options);
-        if (result.status === 200) {
-          this.info = result.data as VehicleInfo;
-          return this.info;
-        }
-      } catch (error: any) {
-        if (error.code !== 'ETIMEDOUT') {
-          this.log.error(`Status failed with error: ${error.code || error.response.status}`);
-        } else {
-          handleError('Status', error.status, this.log);
-        }
-      } finally {
-        this.updating = false;
-        this.emit('updated');
-      }
-    } else {
-      await once(this, 'updated');
-      return this.info;
-    }
+    this.vehicleId = vehicleId;
+    this.autoRefresh = config.autoRefresh || false;
+    this.refreshRate = config.refreshRate || 180;
   }
 
   async issueCommand(command: Command): Promise<string> {
-    if (!this.config.autonomic_token) {
+    
+    if(this.updating){
+      this.log.debug('Command already in progress');
       return '';
     }
-    let type = '';
+    this.updating = true;
+
+    let commandType = '';
     switch (command) {
       case Command.START: {
-        type = 'remoteStart';
+        commandType = 'remoteStart';
         break;
       }
       case Command.STOP: {
-        type = 'cancelRemoteStart';
+        commandType = 'stop';
         break;
       }
       case Command.LOCK: {
-        type = 'lock';
+        commandType = 'lock';
         break;
       }
       case Command.UNLOCK: {
-        type = 'unlock';
+        commandType = 'unlock';
         break;
       }
       case Command.REFRESH: {
-        type = 'statusRefresh';
+        commandType = 'status';
         break;
       }
       default: {
@@ -113,59 +61,113 @@ export class Vehicle extends EventEmitter {
       }
     }
 
-    if (type) {
-      const url = commandUrl + this.vin + '/commands';
-      const options: AxiosRequestConfig = {
-        method: 'POST',
-        url: url,
-        headers: defaultHeaders,
-        data: {
-          properties: {},
-          tags: {},
-          type: type,
-          wakeUp: true,
-        },
-      };
+    if (commandType) {
 
-      if (options.headers) {
-        options.headers['Application-Id'] = this.applicationId;
-        options.headers.Authorization = `Bearer ${this.config.autonomic_token}`;
-      }
-      try {
-        const result = await axios(options);
-        if (result.status < 200 && result.status > 299) {
-          handleError('IssueCommand', result.status, this.log);
-          return '';
+      // Call the fordpass-connection commands here
+
+      try{
+        const result = await new Connection(this.config, this.log).issueCommand(this.vehicleId, commandType);
+        if (result) {
+          this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
+          if(command !== Command.REFRESH){
+            await new Connection(this.config, this.log).issueCommand(this.vehicleId, 'status');
+          }
+          this.updating = false;
+          return result.commandId;
         }
-        return result.data.id;
       } catch (error: any) {
-        this.log.error(`Command failed with error: ${error.code || error.response.status}`);
+        this.updating = false;
+        this.log.error(`Error occurred during request: ${error.message}`);
+        if (error.response) {
+          // Log detailed information about the response if available
+          this.log.error(`Response status: ${error.response.status}`);
+          this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
+          this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+        } else if (error.request) {
+          // Log information about the request
+          this.log.error(`Request made but no response received: ${error.request}`);
+        } else {
+          // Log general error information
+          this.log.error(`Error details: ${JSON.stringify(error)}`);
+        }
       }
     }
     return '';
   }
 
-  async commandStatus(commandId: string): Promise<CommandStatus | undefined> {
-    if (!this.config.autonomic_token) {
-      return;
-    }
-    const url = commandUrl + this.vin + '/commands/' + commandId;
-    const options: AxiosRequestConfig = {
-      method: 'GET',
-      url: url,
-      headers: defaultHeaders,
-    };
+  async issueCommandRefresh(commandId: string, command: Command): Promise<any> {
 
-    if (options.headers) {
-      options.headers['Application-Id'] = this.applicationId;
-      options.headers.Authorization = `Bearer ${this.config.autonomic_token}`;
+    if(this.updating){
+      this.log.debug('Command already in progress');
+      return '';
     }
-    try {
-      const result = await axios(options);
-      return result.data as CommandStatus;
-    } catch (error: any) {
-      this.log.error(`CommandStatus failed with error: ${error.code || error.response.status}`);
+    this.updating = true;
+    let commandType = '';
+    switch (command) {
+      case Command.START: {
+        commandType = 'remoteStart';
+        break;
+      }
+      case Command.STOP: {
+        commandType = 'stop';
+        break;
+      }
+      case Command.LOCK: {
+        commandType = 'lock';
+        break;
+      }
+      case Command.UNLOCK: {
+        commandType = 'unlock';
+        break;
+      }
+      case Command.REFRESH: {
+        commandType = 'status';
+        break;
+      }
+      default: {
+        this.log.error('invalid command');
+        break;
+      }
     }
-    return;
+
+    if (commandType) {
+      try{
+        this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
+        const result = await new Connection(this.config, this.log).issueCommandRefresh(commandId, this.vehicleId, commandType);
+        if (result) {
+          this.updating = false;
+          return result;
+        }
+      } catch (error: any) {
+
+        this.updating = false;
+        this.log.error(`Error occurred during request: ${error.message}`);
+        if (error.response) {
+          // Log detailed information about the response if available
+          this.log.error(`Response status: ${error.response.status}`);
+          this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
+          this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+        } else if (error.request) {
+          // Log information about the request
+          this.log.error(`Request made but no response received: ${error.request}`);
+        } else {
+          // Log general error information
+          this.log.error(`Error details: ${JSON.stringify(error)}`);
+        }
+      }
+    }
+    return '';
+  }
+
+  async retrieveVehicleInfo() {
+
+    const result = await new Connection(this.config, this.log).getVehicleInformation(this.vehicleId);
+    if (result) {
+      this.log.debug(`Retrieved vehicle information for vehicle.  Mileage: ${result.vehicleDetails.mileage} Distance to E: ${result.vehicleDetails.batteryChargeLevel.distanceToEmpty} Tire Pressure Warning: ${result.vehicleStatus.tirePressureWarning}`);
+      this.info = result as VehicleInfo;
+      this.vehicleId = result.vehicleId;
+      this.name = result.nickName;
+    }
+    return undefined;
   }
 }

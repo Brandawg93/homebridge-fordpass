@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge FordPass",
   "name": "homebridge-fordpass",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Fordpass plugin for homebridge: https://homebridge.io/",
   "main": "dist/index.js",
   "license": "GPL-3.0",
@@ -51,7 +51,8 @@
   ],
   "dependencies": {
     "axios": "^1.5.1",
-    "base64url": "^3.0.1"
+    "base64url": "^3.0.1",
+    "form-data": "^4.0.0"
   },
   "devDependencies": {
     "@types/jest": "^27.0.3",

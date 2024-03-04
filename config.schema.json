@@ -3,19 +3,6 @@
   "pluginType": "platform",
   "singular": true,
   "schema": {
-    "username": {
-      "title": "FordPass Username",
-      "type": "string",
-      "required": true
-    },
-    "password": {
-      "title": "FordPass Password",
-      "type": "string",
-      "required": true
-    },
-    "options": {
-      "title": "Advanced Settings",
-      "expandable": true,
       "type": "object",
       "properties": {
         "region": {
@@ -64,8 +51,31 @@
           "description": "Adds an occupancy sensor that can trigger automations when your electric vehicle is plugged into the charging port.",
           "type": "boolean",
           "default": false
+        },
+        "client_secret": {
+          "title": "Client Secret",
+          "type": "string",
+          "required": true,
+          "description": "Enter the client secret from the FordPass API app when you requested access.  Usually starts with RHO"
+        },
+        "code": {
+          "title": "Code",
+          "type": "string",
+          "required": true,
+          "description": "Enter the code from the FordPass API app"
+        },
+        "access_token": {
+          "title": "Access Token",
+          "type": "string",
+          "required": false,
+          "description": "Plugin will populate this"
+        },
+        "refresh_token": {
+          "title": "Refresh Token",
+          "type": "string",
+          "required": false,
+          "description": "Plugin will populate this"
         }
       }
-    }
   }
 }
