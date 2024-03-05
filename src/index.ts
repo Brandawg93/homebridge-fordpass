@@ -225,7 +225,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       this.log.debug('Copy access and refresh tokens to config');
       //this.log.debug(`Access Token: ${authInfo.access_token}`);
       //this.log.debug(`Refresh Token: ${authInfo.refresh_token}`);
-      
+
       await this.addVehicles(ford);
       await this.updateVehicles();
       await this.refreshVehicles();

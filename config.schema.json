@@ -40,6 +40,18 @@
           "type": "boolean",
           "default": false
         },
+        "application_id": {
+          "title": "Application ID",
+          "type": "string",
+          "required": true,
+          "description": "Enter the application ID from the FordPass API app when you requested access.  Usually starts with 1"
+        },
+        "client_id": {
+          "title": "Client ID",
+          "type": "string",
+          "required": true,
+          "description": "Enter the client ID from the FordPass API app when you requested access.  Usually starts with 1"
+        },
         "client_secret": {
           "title": "Client Secret",
           "type": "string",

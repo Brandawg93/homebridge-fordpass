@@ -6,8 +6,6 @@ import { URLSearchParams } from 'url';
 import FormData from 'form-data';
 import { VehicleInfo } from './types/vehicle';
 
-const application_id = 'AFDC085B-377A-4351-B23E-5E1D35FB3700';
-const client_id = '30990062-9618-40e1-a27b-7c6bcb23658a';
 const authorizeUrl =
   'https://dah2vb2cprod.b2clogin.com/914d88b1-3523-4bf6-9be4-1b96b4f6f919/oauth2/v2.0/token?p=B2C_1A_signup_signin_common';
 const baseApiUrl = 'https://api.mps.ford.com/api/fordconnect';
@@ -54,7 +52,7 @@ export class Connection {
       url: baseApiUrl + vehiclesUrl,
       headers: {
         'Content-Type': 'application/json',
-        'Application-Id': application_id,
+        'Application-Id': this.config.application_id,
         Authorization: `Bearer ${this.config.access_token}`,
       },
     };
@@ -103,7 +101,7 @@ export class Connection {
       url: url,
       headers: {
         'Content-Type': 'application/json',
-        'Application-Id': application_id,
+        'Application-Id': this.config.application_id,
         'Authorization': `Bearer ${this.config.access_token}`,
       },
     };
@@ -165,7 +163,7 @@ export class Connection {
       url: baseApiUrl + url.replace('{vehicleId}', vehicleId),
       headers: {
         'Content-Type': 'application/json',
-        'Application-Id': application_id,
+        'Application-Id': this.config.application_id,
         Authorization: `Bearer ${this.config.access_token}`,
       },
     };
@@ -222,7 +220,7 @@ export class Connection {
       url: baseApiUrl + url.replace('{commandId}', commandId),
       headers: {
         'Content-Type': 'application/json',
-        'Application-Id': application_id,
+        'Application-Id': this.config.application_id,
         Authorization: `Bearer ${this.config.access_token}`,
       },
     };
@@ -290,12 +288,52 @@ export class Connection {
    */
   async getAccessToken(): Promise<any> {
     try {
-      const access_res = await this.getAutonomicToken();
-      if (access_res.status === 200 && access_res.data.access_token) {
+      if (!this.config.code || !this.config.client_secret) {
+        this.log.error('Missing code or client_secret');
+        return;
+      }
+      const data = new URLSearchParams();
+      data.append('grant_type', 'authorization_code');
+      data.append('client_id', this.config.client_id ?? '');
+      data.append('client_secret', this.config.client_secret);
+      data.append('code', this.config.code);
+      data.append('redirect_url', 'https://localhost:3000');
+
+      const options: AxiosRequestConfig = {
+        method: 'post',
+        url: authorizeUrl,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          ...headers,
+        },
+        maxBodyLength: Infinity,
+        data: data.toString(),
+      };
+
+      const res = await axios.request(options);
+      this.log.debug('Successfully got token from FordPass API');
+      if (res.status === 200 && res.data.access_token) {
+        this.config.refresh_token = res.data.refresh_token;
+        this.config.access_token = res.data.access_token;
         return this.getRefreshToken();
       }
-    } catch (err: any) {
-      this.log.error(`getAccessToken() Auth failed with error: ${err}`);
+    } catch (error: any) {
+      this.log.error(
+        "Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the 'code'.",
+      );
+      this.log.error(`Error occurred during request: ${error.message}`);
+      if (error.response) {
+        // Log detailed information about the response if available
+        this.log.error(`Response status: ${error.response.status}`);
+        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+      } else if (error.request) {
+        // Log information about the request
+        this.log.error(`Request made but no response received: ${error.request}`);
+      } else {
+        // Log general error information
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
+      }
     }
   }
 
@@ -308,7 +346,7 @@ export class Connection {
       const data = new FormData();
       data.append('grant_type', 'refresh_token');
       data.append('refresh_token', this.config.refresh_token);
-      data.append('client_id', client_id);
+      data.append('client_id', this.config.client_id);
       data.append('client_secret', this.config.client_secret);
 
       const options = {
@@ -331,61 +369,6 @@ export class Connection {
         this.log.error(`Auth failed with status: ${res.status}`);
       }
     } catch (error: any) {
-      this.log.error(`Error occurred during request: ${error.message}`);
-      if (error.response) {
-        // Log detailed information about the response if available
-        this.log.error(`Response status: ${error.response.status}`);
-        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
-        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
-      } else if (error.request) {
-        // Log information about the request
-        this.log.error(`Request made but no response received: ${error.request}`);
-      } else {
-        // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
-      }
-    }
-  }
-
-  /**
-   * Retrieves the Autonomic token from the FordPass API.
-   * @returns A Promise that resolves to the token data if successful, or undefined if there was an error.
-   */
-  async getAutonomicToken(): Promise<any> {
-    if (!this.config.code || !this.config.client_secret) {
-      this.log.error('Missing code or client_secret');
-      return;
-    }
-    const data = new URLSearchParams();
-    data.append('grant_type', 'authorization_code');
-    data.append('client_id', client_id);
-    data.append('client_secret', this.config.client_secret);
-    data.append('code', this.config.code);
-    data.append('redirect_url', 'https://localhost:3000');
-
-    const options: AxiosRequestConfig = {
-      method: 'post',
-      url: authorizeUrl,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        ...headers,
-      },
-      maxBodyLength: Infinity,
-      data: data.toString(),
-    };
-
-    try {
-      const res = await axios.request(options);
-      this.log.debug('Successfully got token from FordPass API');
-      if (res.status === 200 && res.data.access_token) {
-        this.config.refresh_token = res.data.refresh_token;
-        this.config.access_token = res.data.access_token;
-        return res.data;
-      }
-    } catch (error: any) {
-      this.log.error(
-        "Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the 'code'.",
-      );
       this.log.error(`Error occurred during request: ${error.message}`);
       if (error.response) {
         // Log detailed information about the response if available
