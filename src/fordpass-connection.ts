@@ -97,20 +97,22 @@ export class Connection {
       await this.auth();
     }
 
+    const url = baseApiUrl + vehicleInformationUrl.replace('{vehicleId}', vehicleId);
     const options: AxiosRequestConfig = {
       method: 'GET',
-      url: baseApiUrl + vehicleInformationUrl.replace('{vehicleId}', vehicleId),
+      url: url,
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': application_id,
-        Authorization: `Bearer ${this.config.access_token}`,
+        'Authorization': `Bearer ${this.config.access_token}`,
       },
     };
 
     try {
-      const result = await axios(options);
+      this.log.debug(`getVehicleInformation: ${JSON.stringify(options)}`);
+      const result = await axios.request(options);
       if (result.status < 300 && result.data) {
-        // this.log.debug(`Found vehicle info : ${JSON.stringify(result.data, null, 2)}`);
+        this.log.debug(`Found vehicle info : ${JSON.stringify(result.data, null, 2)}`);
         if (result.data.status === 'SUCCESS') {
           return result.data.vehicle as VehicleInfo;
         }
