@@ -267,10 +267,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   }
 
   async updateVehicles(): Promise<void> {
-  
     // wait for 10 seconds before updating the vehicle info
     await new Promise((resolve) => setTimeout(resolve, 10000));
-    await this.vehicle.retrieveVehicleInfo();
+    await this.vehicle.retrieveVehicleInfo(this.vehicle.vehicleId);
     const status = this.vehicle?.info?.vehicleStatus;
     const lockStatus = status?.lockStatus?.value;
     let lockNumber = hap.Characteristic.LockCurrentState.UNSECURED;

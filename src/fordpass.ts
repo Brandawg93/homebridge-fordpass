@@ -158,8 +158,8 @@ export class Vehicle extends EventEmitter {
     return '';
   }
 
-  async retrieveVehicleInfo(): Promise<void> {
-    const result = await new Connection(this.config, this.log).getVehicleInformation(this.vehicleId);
+  async retrieveVehicleInfo(vehicleId: string): Promise<void> {
+    const result = await new Connection(this.config, this.log).getVehicleInformation(vehicleId);
     if (result) {
       this.log.debug(`Result: ${JSON.stringify(result.vehicleDetails)}`);
       this.log.debug(
