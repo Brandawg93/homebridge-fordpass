@@ -70,7 +70,7 @@ interface VehicleStatus {
   chargingStatus: ChargingStatus;
   plugStatus: PlugStatus;
   ignitionStatus: IgnitionStatus;
-  doorStatus: DoorStatus[];
+  doorStatus: Array<DoorStatus>;
   lockStatus: LockStatus;
   alarmStatus: AlarmStatus;
   fuelLevel: Status;

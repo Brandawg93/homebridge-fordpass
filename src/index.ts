@@ -65,10 +65,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const defaultState = hap.Characteristic.LockTargetState.UNSECURED;
     const lockService = fordAccessory.createService(hap.Service.LockMechanism);
     const switchService = fordAccessory.createService(hap.Service.Switch);
-    const batteryService = fordAccessory.createService(
-      hap.Service.Battery,
-      this.config.batteryName || 'Fuel Level',
-    );
+    const batteryService = fordAccessory.createService(hap.Service.Battery, this.config.batteryName || 'Fuel Level');
 
     if (this.config.chargingSwitch) {
       fordAccessory.createService(hap.Service.OccupancySensor, 'Charging');
@@ -88,45 +85,53 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .setCharacteristic(hap.Characteristic.LockTargetState, defaultState)
       .getCharacteristic(hap.Characteristic.LockTargetState)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.log.debug(`SET ${value ? 'Locking' : 'Unlocking'} ${accessory.displayName} ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
-        if(value !== (vehicle?.info?.vehicleStatus.lockStatus?.value === 'LOCKED') ? hap.Characteristic.LockTargetState.SECURED : hap.Characteristic.LockTargetState.UNSECURED){
+        this.log.debug(`
+          SET ${value ? 'Locking' : 'Unlocking'} ${accessory.displayName} 
+          ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
+
+        if (
+          value !== (vehicle?.info?.vehicleStatus.lockStatus?.value === 'LOCKED')
+            ? hap.Characteristic.LockTargetState.SECURED
+            : hap.Characteristic.LockTargetState.UNSECURED
+        ) {
           this.log.debug('LOCK is already in the requested state');
           callback();
           return;
         }
         this.log.debug(`SET ${value ? 'Locking' : 'Unlocking'} ${accessory.displayName}`);
         let command = Command.LOCK;
-        if (value == hap.Characteristic.LockTargetState.UNSECURED) {
+        if (value === hap.Characteristic.LockTargetState.UNSECURED) {
           command = Command.UNLOCK;
         }
         // Just call the command and after 5 seconds update the vehicle info
         await vehicle.issueCommand(command);
         this.log.debug('Waiting 6 seconds to update vehicle info');
-        await new Promise(resolve => setTimeout(resolve, 6000));
+        await new Promise((resolve) => setTimeout(resolve, 6000));
         this.log.debug('Done waiting...Updating vehicle info');
         await vehicle.retrieveVehicleInfo();
         this.log.debug(`Lock status is now: ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
-        const self = this;
         callback();
       })
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
         let lockNumber = hap.Characteristic.LockTargetState.UNSECURED;
-        const lockStatus =
-          vehicle?.info?.vehicleStatus.lockStatus?.value || 'LOCKED';
+        const lockStatus = vehicle?.info?.vehicleStatus.lockStatus?.value || 'LOCKED';
         if (lockStatus === 'LOCKED') {
           lockNumber = hap.Characteristic.LockTargetState.SECURED;
         }
         callback(undefined, lockNumber);
-
       });
 
     switchService
       .setCharacteristic(hap.Characteristic.On, false)
       .getCharacteristic(hap.Characteristic.On)
       .on(CharacteristicEventTypes.SET, async (value: CharacteristicValue, callback: CharacteristicSetCallback) => {
-        this.log.debug(`SET ${value ? 'Starting' : 'Stopping'} ${accessory.displayName} ${vehicle?.info?.vehicleStatus.lockStatus?.value}`);
-        if(value !== (vehicle?.info?.vehicleStatus.ignitionStatus.value === 'ON')){
+        this.log.debug(
+          `SET ${value ? 'Starting' : 'Stopping'} ${accessory.displayName} ${
+            vehicle?.info?.vehicleStatus.lockStatus?.value
+          }`,
+        );
+        if (value !== (vehicle?.info?.vehicleStatus.ignitionStatus.value === 'ON')) {
           this.log.debug('Engine is already in the requested state');
           callback();
           return;
@@ -138,7 +143,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
           await vehicle.issueCommand(Command.STOP);
         }
 
-        await new Promise(resolve => setTimeout(resolve, 6000));
+        await new Promise((resolve) => setTimeout(resolve, 6000));
         await vehicle.retrieveVehicleInfo();
         this.log.debug(`Start status is now: ${vehicle?.info?.vehicleStatus.ignitionStatus.value}`);
         callback();
@@ -150,7 +155,6 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
         // switchService.updateCharacteristic(hap.Characteristic.On, engineStatus === 'ON');
         switchService.getCharacteristic(hap.Characteristic.On).updateValue(engineStatus === 'ON' ? true : false);
-      
       });
 
     batteryService
@@ -269,10 +273,8 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
   async updateVehicles(): Promise<void> {
     this.vehicles.forEach(async (vehicle: Vehicle) => {
-
-      const statusReqId = await vehicle.issueCommand(Command.REFRESH);
       // wait for 10 seconds before updating the vehicle info
-      await new Promise(resolve => setTimeout(resolve, 10000));
+      await new Promise((resolve) => setTimeout(resolve, 10000));
       await vehicle.retrieveVehicleInfo();
       const status = vehicle?.info?.vehicleStatus;
       const lockStatus = status?.lockStatus?.value;
@@ -325,7 +327,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
   async refreshVehicles(): Promise<void> {
     this.vehicles.forEach(async (vehicle: Vehicle) => {
-      this.log.debug(`Configuring ${vehicle.name} (${this.config.autoRefresh}) to refresh every ${this.config.refreshRate} minutes.`);
+      this.log.debug(
+        `Configuring ${vehicle.name} (${this.config.autoRefresh}) to refresh every ${this.config.refreshRate} minutes.`,
+      );
       if (vehicle.autoRefresh && vehicle.refreshRate && vehicle.refreshRate > 0) {
         this.log.debug(`Configuring ${vehicle.name} to refresh every ${vehicle.refreshRate} minutes.`);
         setInterval(async () => {

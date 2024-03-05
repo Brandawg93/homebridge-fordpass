@@ -1,4 +1,3 @@
-
 import { Logging } from 'homebridge';
 import { VehicleInfo, Command } from './types/vehicle';
 import { Connection } from './fordpass-connection';
@@ -26,8 +25,7 @@ export class Vehicle extends EventEmitter {
   }
 
   async issueCommand(command: Command): Promise<string> {
-    
-    if(this.updating){
+    if (this.updating) {
       this.log.debug('Command already in progress');
       return '';
     }
@@ -62,14 +60,13 @@ export class Vehicle extends EventEmitter {
     }
 
     if (commandType) {
-
       // Call the fordpass-connection commands here
 
-      try{
+      try {
         const result = await new Connection(this.config, this.log).issueCommand(this.vehicleId, commandType);
         if (result) {
           this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
-          if(command !== Command.REFRESH){
+          if (command !== Command.REFRESH) {
             await new Connection(this.config, this.log).issueCommand(this.vehicleId, 'status');
           }
           this.updating = false;
@@ -96,8 +93,7 @@ export class Vehicle extends EventEmitter {
   }
 
   async issueCommandRefresh(commandId: string, command: Command): Promise<any> {
-
-    if(this.updating){
+    if (this.updating) {
       this.log.debug('Command already in progress');
       return '';
     }
@@ -131,15 +127,18 @@ export class Vehicle extends EventEmitter {
     }
 
     if (commandType) {
-      try{
+      try {
         this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
-        const result = await new Connection(this.config, this.log).issueCommandRefresh(commandId, this.vehicleId, commandType);
+        const result = await new Connection(this.config, this.log).issueCommandRefresh(
+          commandId,
+          this.vehicleId,
+          commandType,
+        );
         if (result) {
           this.updating = false;
           return result;
         }
       } catch (error: any) {
-
         this.updating = false;
         this.log.error(`Error occurred during request: ${error.message}`);
         if (error.response) {
@@ -159,11 +158,12 @@ export class Vehicle extends EventEmitter {
     return '';
   }
 
-  async retrieveVehicleInfo() {
-
+  async retrieveVehicleInfo(): Promise<void> {
     const result = await new Connection(this.config, this.log).getVehicleInformation(this.vehicleId);
     if (result) {
-      this.log.debug(`Retrieved vehicle information for vehicle.  Mileage: ${result.vehicleDetails.mileage} Distance to E: ${result.vehicleDetails.batteryChargeLevel.distanceToEmpty} Tire Pressure Warning: ${result.vehicleStatus.tirePressureWarning}`);
+      this.log.debug(
+        `Retrieved vehicle information for vehicle.  Mileage: ${result.vehicleDetails.mileage} Distance to E: ${result.vehicleDetails.batteryChargeLevel.distanceToEmpty} Tire Pressure Warning: ${result.vehicleStatus.tirePressureWarning}`,
+      );
       this.info = result as VehicleInfo;
       this.vehicleId = result.vehicleId;
       this.name = result.nickName;

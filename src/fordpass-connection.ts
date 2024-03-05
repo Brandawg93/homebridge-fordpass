@@ -8,7 +8,8 @@ import { VehicleInfo } from './types/vehicle';
 
 const application_id = 'AFDC085B-377A-4351-B23E-5E1D35FB3700';
 const client_id = '30990062-9618-40e1-a27b-7c6bcb23658a';
-const authorizeUrl = 'https://dah2vb2cprod.b2clogin.com/914d88b1-3523-4bf6-9be4-1b96b4f6f919/oauth2/v2.0/token?p=B2C_1A_signup_signin_common';
+const authorizeUrl =
+  'https://dah2vb2cprod.b2clogin.com/914d88b1-3523-4bf6-9be4-1b96b4f6f919/oauth2/v2.0/token?p=B2C_1A_signup_signin_common';
 const baseApiUrl = 'https://api.mps.ford.com/api/fordconnect';
 const vehiclesUrl = '/v2/vehicles';
 const vehicleStatusUrl = '/v1/vehicles/{vehicleId}/status';
@@ -42,9 +43,8 @@ export class Connection {
     this.config = config;
     this.log = log;
   }
-  
-  async getVehicles(): Promise<Array<VehicleConfig>> {
 
+  async getVehicles(): Promise<Array<VehicleConfig>> {
     if (!this.config.access_token) {
       await this.auth();
     }
@@ -103,7 +103,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': application_id,
-        'Authorization': `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.config.access_token}`,
       },
     };
 
@@ -111,7 +111,7 @@ export class Connection {
       const result = await axios(options);
       if (result.status < 300 && result.data) {
         // this.log.debug(`Found vehicle info : ${JSON.stringify(result.data, null, 2)}`);
-        if(result.data.status === 'SUCCESS'){
+        if (result.data.status === 'SUCCESS') {
           return result.data.vehicle as VehicleInfo;
         }
 
@@ -164,7 +164,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': application_id,
-        'Authorization': `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.config.access_token}`,
       },
     };
 
@@ -221,7 +221,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': application_id,
-        'Authorization': `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.config.access_token}`,
       },
     };
 
@@ -262,7 +262,6 @@ export class Connection {
     }
   }
 
-  
   /**
    * Authenticates the user and returns the access token or refresh token.
    * If the refresh token is available, it will be used to get a new access token.
@@ -270,7 +269,7 @@ export class Connection {
    * @returns A promise that resolves to the access token or refresh token.
    */
   async auth(): Promise<any> {
-    if(!this.config.code && !this.config.client_secret){
+    if (!this.config.code && !this.config.client_secret) {
       this.log.error('Missing code or client_secret');
       return;
     }
@@ -293,7 +292,6 @@ export class Connection {
       if (access_res.status === 200 && access_res.data.access_token) {
         return this.getRefreshToken();
       }
-
     } catch (err: any) {
       this.log.error(`getAccessToken() Auth failed with error: ${err}`);
     }
@@ -319,7 +317,7 @@ export class Connection {
           'Content-Type': 'multipart/form-data',
           ...data.getHeaders(),
         },
-        data : data,
+        data: data,
       };
       const res = await axios.request(options);
       if (res.status === 200 && res.data.access_token) {
@@ -352,7 +350,7 @@ export class Connection {
    * @returns A Promise that resolves to the token data if successful, or undefined if there was an error.
    */
   async getAutonomicToken(): Promise<any> {
-    if(!this.config.code || !this.config.client_secret){
+    if (!this.config.code || !this.config.client_secret) {
       this.log.error('Missing code or client_secret');
       return;
     }
@@ -384,7 +382,9 @@ export class Connection {
         return res.data;
       }
     } catch (err: any) {
-      this.log.error('Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the \'code\'.');
+      this.log.error(
+        "Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the 'code'.",
+      );
       this.log.error(`getAutonomicToken() Auth failed with error: ${err}`);
     }
   }
