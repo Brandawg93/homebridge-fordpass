@@ -28,7 +28,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   private readonly log: Logging;
   private readonly api: API;
   private readonly accessories: Array<PlatformAccessory> = [];
-  private vehicle: Vehicle;
+  private vehicle!: Vehicle;
   private config: FordpassConfig;
   private pendingLockUpdate = false;
 
@@ -241,9 +241,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     const vehicles = await connection.getVehicles();
     // Get first vehicle in the list as FordPass only lets you choose one per Dev Account
     if (!vehicles) {
-      let vehicleConfig = vehicles[0] as VehicleConfig;
-      vehicleConfig.vehicleId = vehicle.vehicleId.toUpperCase();
-      const name = vehicleConfig.nickName || vehicleConfig.modelYear + ' ' + vehicleConfig.make + ' ' + vehicleConfig.modelName;
+      const vehicleConfig = vehicles[0] as VehicleConfig;
+      vehicleConfig.vehicleId = vehicleConfig.vehicleId.toUpperCase();
+      const name =
+        vehicleConfig.nickName || vehicleConfig.modelYear + ' ' + vehicleConfig.make + ' ' + vehicleConfig.modelName;
       const uuid = hap.uuid.generate(vehicleConfig.vehicleId);
       const accessory = new Accessory(name, uuid);
       accessory.context.name = name;
