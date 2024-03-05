@@ -32,7 +32,6 @@ export interface FordpassConfig extends PlatformConfig {
   batteryName?: string;
   chargingSwitch?: boolean;
   plugSwitch?: boolean;
-  region?: string;
   client_secret?: string;
   code?: string;
   access_token?: string;

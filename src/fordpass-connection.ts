@@ -380,14 +380,13 @@ export class Connection {
       if (res.status === 200 && res.data.access_token) {
         this.config.refresh_token = res.data.refresh_token;
         this.config.access_token = res.data.access_token;
-        this.config.save();
         return res.data;
       }
-    } catch (err: any) {
+    } catch (error: any) {
       this.log.error(
         "Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the 'code'.",
       );
-      this.log.error(`getAutonomicToken() Auth failed with error: ${err}`);
+      this.log.error(`getAutonomicToken() Auth failed with error: ${error}`);
     }
   }
 }
