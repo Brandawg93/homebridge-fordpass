@@ -84,7 +84,7 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`getVehicles Error details: ${JSON.stringify(error)}`);
       }
       return [];
     }
@@ -256,7 +256,7 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`issueCommandRefresh Error details: ${JSON.stringify(error)}`);
       }
       return {};
     }
@@ -332,7 +332,7 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`getAccessToken Error details: ${JSON.stringify(error)}`);
       }
     }
   }
@@ -380,7 +380,7 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`getRefreshToken Error details: ${JSON.stringify(error)}`);
       }
     }
   }
