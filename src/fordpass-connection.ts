@@ -55,7 +55,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': application_id,
-        'Authorization': `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.config.access_token}`,
       },
     };
 

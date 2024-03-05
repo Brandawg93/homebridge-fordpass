@@ -162,6 +162,10 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       .getCharacteristic(hap.Characteristic.BatteryLevel)
       .on(CharacteristicEventTypes.GET, async (callback: CharacteristicGetCallback) => {
         // Return cached value immediately then update properly
+        if (!vehicle) {
+          callback(undefined, 100);
+          return;
+        }
         const fuel = vehicle?.info?.vehicleStatus.fuelLevel?.value as number;
         const battery = vehicle?.info?.vehicleDetails.batteryChargeLevel?.value as number;
         let level = fuel || battery || 100;
@@ -193,7 +197,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
           );
         }
 
-        if (level < 10) {
+        if (level < 20) {
           batteryService.updateCharacteristic(
             hap.Characteristic.StatusLowBattery,
             hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW,
@@ -212,6 +216,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   async didFinishLaunching(): Promise<void> {
     const ford = new Connection(this.config, this.log);
     const authInfo = await ford.auth();
+    this.log.debug('Auth info: ' + JSON.stringify(authInfo));
     if (authInfo) {
       setInterval(async () => {
         this.log.debug('Reauthenticating with refresh token');
