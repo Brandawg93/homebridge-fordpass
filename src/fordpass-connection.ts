@@ -386,7 +386,19 @@ export class Connection {
       this.log.error(
         "Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the 'code'.",
       );
-      this.log.error(`getAutonomicToken() Auth failed with error: ${error}`);
+      this.log.error(`Error occurred during request: ${error.message}`);
+      if (error.response) {
+        // Log detailed information about the response if available
+        this.log.error(`Response status: ${error.response.status}`);
+        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+      } else if (error.request) {
+        // Log information about the request
+        this.log.error(`Request made but no response received: ${error.request}`);
+      } else {
+        // Log general error information
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
+      }
     }
   }
 }
