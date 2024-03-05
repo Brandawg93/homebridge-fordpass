@@ -240,7 +240,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
 
   async addVehicles(connection: Connection): Promise<void> {
     const vehicles = await connection.getVehicles();
-    vehicles?.forEach(async (vehicle: VehicleConfig) => {
+    // Get first vehicle in the list as FordPass only lets you choose one per Dev Account
+    if (!vehicles) {
+      const vehicle = vehicles[0] as VehicleConfig;
       vehicle.vehicleId = vehicle.vehicleId.toUpperCase();
       const name = vehicle.nickName || vehicle.modelYear + ' ' + vehicle.make + ' ' + vehicle.modelName;
       const uuid = hap.uuid.generate(vehicle.vehicleId);
@@ -261,8 +263,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         this.configureAccessory(accessory); // abusing the configureAccessory here
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
-    });
-
+    }
     // Remove vehicles that were removed from config
     this.accessories.forEach((accessory: PlatformAccessory<Record<string, string>>) => {
       if (!vehicles?.find((x: VehicleConfig) => x.vehicleId === accessory.context.vehicleId)) {
