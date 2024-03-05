@@ -108,7 +108,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         this.log.debug('Waiting 6 seconds to update vehicle info');
         await new Promise((resolve) => setTimeout(resolve, 6000));
         this.log.debug('Done waiting...Updating vehicle info');
-        await this.vehicle.retrieveVehicleInfo();
+        await this.vehicle.retrieveVehicleInfo(this.vehicle.vehicleId);
         this.log.debug(`Lock status is now: ${this.vehicle?.info?.vehicleStatus.lockStatus?.value}`);
         callback();
       })
@@ -144,7 +144,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         }
 
         await new Promise((resolve) => setTimeout(resolve, 6000));
-        await this.vehicle.retrieveVehicleInfo();
+        await this.vehicle.retrieveVehicleInfo(this.vehicle.vehicleId);
         this.log.debug(`Start status is now: ${this.vehicle?.info?.vehicleStatus.ignitionStatus.value}`);
         callback();
       })
