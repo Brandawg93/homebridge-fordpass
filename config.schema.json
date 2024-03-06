@@ -63,18 +63,6 @@
           "type": "string",
           "required": true,
           "description": "Enter the code from the FordPass API app"
-        },
-        "access_token": {
-          "title": "Access Token",
-          "type": "string",
-          "required": false,
-          "description": "Plugin will populate this"
-        },
-        "refresh_token": {
-          "title": "Refresh Token",
-          "type": "string",
-          "required": false,
-          "description": "Plugin will populate this"
         }
       }
   }

@@ -58,7 +58,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       this.log.info(`${accessory.displayName} identified!`);
     });
 
-    this.vehicle = new Vehicle(accessory.context.name, accessory.context.vin, this.config, this.log);
+    this.vehicle = new Vehicle(accessory.context.name, accessory.context.vin, this.config, this.log, this.api);
     const fordAccessory = new FordpassAccessory(accessory);
 
     // Create Lock service
@@ -213,14 +213,15 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   }
 
   async didFinishLaunching(): Promise<void> {
-    const ford = new Connection(this.config, this.log);
+    this.log.debug('Configuring FordPass');
+    const ford = new Connection(this.config, this.log, this.api);
     const authInfo = await ford.auth();
     this.log.debug('Auth info: ' + JSON.stringify(authInfo));
     if (authInfo) {
       setInterval(async () => {
         this.log.debug('Reauthenticating with refresh token');
         await ford.getRefreshToken();
-      }, authInfo.expires_in * 1000 - 10000);
+      }, (authInfo.expires_in ?? 0) * 1000 - 10000);
 
       this.log.debug('Copy access and refresh tokens to config');
       //this.log.debug(`Access Token: ${authInfo.access_token}`);
@@ -269,6 +270,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   async updateVehicles(): Promise<void> {
     // wait for 10 seconds before updating the vehicle info
     await new Promise((resolve) => setTimeout(resolve, 10000));
+    this.log.debug(`updating vehicle info for ${JSON.stringify(this.vehicle)}`);
     await this.vehicle.retrieveVehicleInfo(this.vehicle.vehicleId);
     const status = this.vehicle?.info?.vehicleStatus;
     const lockStatus = status?.lockStatus?.value;

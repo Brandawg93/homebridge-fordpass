@@ -1,10 +1,11 @@
-import { Logging } from 'homebridge';
+import { API, Logging } from 'homebridge';
 import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
-import { FordpassConfig, VehicleConfig } from './types/config';
+import { FordpassConfig, VehicleConfig, SecurityConfig } from './types/config';
 import { URLSearchParams } from 'url';
 import FormData from 'form-data';
 import { VehicleInfo } from './types/vehicle';
+import fs from 'fs';
 
 const authorizeUrl =
   'https://dah2vb2cprod.b2clogin.com/914d88b1-3523-4bf6-9be4-1b96b4f6f919/oauth2/v2.0/token?p=B2C_1A_signup_signin_common';
@@ -36,14 +37,17 @@ const headers = {
 export class Connection {
   private config: FordpassConfig;
   private readonly log: Logging;
+  private readonly api: API;
+  private credentials!: SecurityConfig;
 
-  constructor(config: FordpassConfig, log: Logging) {
+  constructor(config: FordpassConfig, log: Logging, api: API) {
     this.config = config;
     this.log = log;
+    this.api = api;
   }
 
   async getVehicles(): Promise<Array<VehicleConfig>> {
-    if (!this.config.access_token) {
+    if (!this.credentials.access_token) {
       await this.auth();
     }
 
@@ -53,7 +57,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': this.config.application_id,
-        Authorization: `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
     };
 
@@ -84,14 +88,14 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`getVehicles Error details: ${JSON.stringify(error)}`);
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
       }
       return [];
     }
   }
 
   async getVehicleInformation(vehicleId: string): Promise<VehicleInfo> {
-    if (!this.config.access_token) {
+    if (!this.credentials.access_token) {
       await this.auth();
     }
 
@@ -102,7 +106,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': this.config.application_id,
-        'Authorization': `Bearer ${this.config.access_token}`,
+        'Authorization': `Bearer ${this.credentials.access_token}`,
       },
     };
 
@@ -127,7 +131,7 @@ export class Connection {
   }
 
   async issueCommand(vehicleId: string, command: string): Promise<any> {
-    if (!this.config.access_token) {
+    if (!this.credentials.access_token) {
       await this.auth();
     }
 
@@ -164,7 +168,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': this.config.application_id,
-        Authorization: `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
     };
 
@@ -184,7 +188,7 @@ export class Connection {
   }
 
   async issueCommandRefresh(commandId: string, vehicleId: string, command: string): Promise<any> {
-    if (!this.config.access_token) {
+    if (!this.credentials.access_token) {
       await this.auth();
     }
 
@@ -221,7 +225,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': this.config.application_id,
-        Authorization: `Bearer ${this.config.access_token}`,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
     };
 
@@ -256,7 +260,7 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`issueCommandRefresh Error details: ${JSON.stringify(error)}`);
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
       }
       return {};
     }
@@ -269,12 +273,13 @@ export class Connection {
    * @returns A promise that resolves to the access token or refresh token.
    */
   async auth(): Promise<any> {
+    this.credentials = this.getCredentials();
     if (!this.config.code && !this.config.client_secret) {
       this.log.error('Missing code or client_secret');
       return;
     }
 
-    if (!this.config.refresh_token) {
+    if (!this.credentials.refresh_token) {
       return await this.getAccessToken();
     } else {
       const refreshToken = await this.getRefreshToken();
@@ -288,13 +293,13 @@ export class Connection {
    */
   async getAccessToken(): Promise<any> {
     try {
-      if (!this.config.code || !this.config.client_secret) {
-        this.log.error('Missing code or client_secret');
+      if (!this.config.code || !this.config.client_secret || !this.config.client_id) {
+        this.log.error('Missing code or client_secret, or client_id');
         return;
       }
       const data = new URLSearchParams();
       data.append('grant_type', 'authorization_code');
-      data.append('client_id', this.config.client_id ?? '');
+      data.append('client_id', this.config.client_id);
       data.append('client_secret', this.config.client_secret);
       data.append('code', this.config.code);
       data.append('redirect_url', 'https://localhost:3000');
@@ -313,8 +318,9 @@ export class Connection {
       const res = await axios.request(options);
       this.log.debug('Successfully got token from FordPass API');
       if (res.status === 200 && res.data.access_token) {
-        this.config.refresh_token = res.data.refresh_token;
-        this.config.access_token = res.data.access_token;
+        this.credentials.refresh_token = res.data.refresh_token;
+        this.credentials.access_token = res.data.access_token;
+        this.credentials.expires_in = res.data.expires_in;
         return this.getRefreshToken();
       }
     } catch (error: any) {
@@ -332,7 +338,7 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`getAccessToken Error details: ${JSON.stringify(error)}`);
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
       }
     }
   }
@@ -345,7 +351,7 @@ export class Connection {
     try {
       const data = new FormData();
       data.append('grant_type', 'refresh_token');
-      data.append('refresh_token', this.config.refresh_token);
+      data.append('refresh_token', this.credentials.refresh_token);
       data.append('client_id', this.config.client_id);
       data.append('client_secret', this.config.client_secret);
 
@@ -361,9 +367,10 @@ export class Connection {
       };
       const res = await axios.request(options);
       if (res.status === 200 && res.data.access_token) {
-        this.config.access_token = res.data.access_token;
-        this.config.refresh_token = res.data.refresh_token;
-
+        this.credentials.access_token = res.data.access_token;
+        this.credentials.refresh_token = res.data.refresh_token;
+        this.credentials.expires_in = res.data.expires_in;
+        this.createOrUpdateCredentials();
         return res.data;
       } else {
         this.log.error(`Auth failed with status: ${res.status}`);
@@ -380,8 +387,37 @@ export class Connection {
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`getRefreshToken Error details: ${JSON.stringify(error)}`);
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
       }
     }
+  }
+
+  async createOrUpdateCredentials(): Promise<SecurityConfig> {
+    const storagePath = this.api.user.storagePath();
+    this.log.debug(`Storage path: ${storagePath}`);
+    const credentialsPath = `${storagePath}/security-credentials.json`;
+    if (!fs.existsSync(credentialsPath)) {
+      fs.writeFileSync(credentialsPath, JSON.stringify(this.credentials));
+      this.log.debug('Credentials file created');
+    } else {
+      fs.writeFileSync(credentialsPath, JSON.stringify(this.credentials));
+      this.log.debug('Credentials file updated');
+    }
+    return this.getCredentials();
+  }
+
+  getCredentials(): SecurityConfig {
+    try {
+      this.log.debug('Retrieving credentials');
+      const storagePath = this.api.user.storagePath();
+      const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
+      if (fs.existsSync(credentialsPath)) {
+        const credentials = JSON.parse(fs.readFileSync(credentialsPath).toString());
+        return credentials;
+      }
+    } catch (error: any) {
+      this.log.error(`Error occurred retrieving credentials: ${error}`);
+    }
+    return { access_token: '', refresh_token: '', expires_in: 0 };
   }
 }

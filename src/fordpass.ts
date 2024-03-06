@@ -1,4 +1,4 @@
-import { Logging } from 'homebridge';
+import { API, Logging } from 'homebridge';
 import { VehicleInfo, Command } from './types/vehicle';
 import { Connection } from './fordpass-connection';
 import { FordpassConfig } from './types/config';
@@ -7,6 +7,7 @@ import { once, EventEmitter } from 'events';
 export class Vehicle extends EventEmitter {
   private config: FordpassConfig;
   private readonly log: Logging;
+  private readonly api: API;
   public info: VehicleInfo | undefined;
   private updating = false;
   name: string;
@@ -14,10 +15,11 @@ export class Vehicle extends EventEmitter {
   autoRefresh: boolean;
   refreshRate: number;
 
-  constructor(name: string, vehicleId: string, config: FordpassConfig, log: Logging) {
+  constructor(name: string, vehicleId: string, config: FordpassConfig, log: Logging, api: API) {
     super();
     this.config = config;
     this.log = log;
+    this.api = api;
     this.name = name;
     this.vehicleId = vehicleId;
     this.autoRefresh = config.autoRefresh || false;
@@ -63,11 +65,11 @@ export class Vehicle extends EventEmitter {
       // Call the fordpass-connection commands here
 
       try {
-        const result = await new Connection(this.config, this.log).issueCommand(this.vehicleId, commandType);
+        const result = await new Connection(this.config, this.log, this.api).issueCommand(this.vehicleId, commandType);
         if (result) {
           this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
           if (command !== Command.REFRESH) {
-            await new Connection(this.config, this.log).issueCommand(this.vehicleId, 'status');
+            await new Connection(this.config, this.log, this.api).issueCommand(this.vehicleId, 'status');
           }
           this.updating = false;
           return result.commandId;
@@ -129,7 +131,7 @@ export class Vehicle extends EventEmitter {
     if (commandType) {
       try {
         this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
-        const result = await new Connection(this.config, this.log).issueCommandRefresh(
+        const result = await new Connection(this.config, this.log, this.api).issueCommandRefresh(
           commandId,
           this.vehicleId,
           commandType,
@@ -159,7 +161,7 @@ export class Vehicle extends EventEmitter {
   }
 
   async retrieveVehicleInfo(vehicleId: string): Promise<void> {
-    const result = await new Connection(this.config, this.log).getVehicleInformation(vehicleId);
+    const result = await new Connection(this.config, this.log, this.api).getVehicleInformation(vehicleId);
     if (result) {
       this.log.debug(`Result: ${JSON.stringify(result.vehicleDetails)}`);
       this.log.debug(
@@ -169,6 +171,6 @@ export class Vehicle extends EventEmitter {
       this.vehicleId = result.vehicleId;
       this.name = result.nickName;
     }
-    return undefined;
+    return;
   }
 }
