@@ -28,7 +28,6 @@ export class Vehicle extends EventEmitter {
 
   async issueCommand(command: Command): Promise<string> {
     if (this.updating) {
-      this.log.debug('Command already in progress');
       return '';
     }
     this.updating = true;
@@ -67,7 +66,6 @@ export class Vehicle extends EventEmitter {
       try {
         const result = await new Connection(this.config, this.log, this.api).issueCommand(this.vehicleId, commandType);
         if (result) {
-          this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
           if (command !== Command.REFRESH) {
             await new Connection(this.config, this.log, this.api).issueCommand(this.vehicleId, 'status');
           }
@@ -76,7 +74,6 @@ export class Vehicle extends EventEmitter {
         }
       } catch (error: any) {
         this.updating = false;
-        this.log.error(`Error occurred during request: ${error.message}`);
         if (error.response) {
           // Log detailed information about the response if available
           this.log.error(`Response status: ${error.response.status}`);
@@ -96,7 +93,6 @@ export class Vehicle extends EventEmitter {
 
   async issueCommandRefresh(commandId: string, command: Command): Promise<any> {
     if (this.updating) {
-      this.log.debug('Command already in progress');
       return '';
     }
     this.updating = true;
@@ -130,7 +126,6 @@ export class Vehicle extends EventEmitter {
 
     if (commandType) {
       try {
-        this.log.debug(`Issuing command: ${commandType} for vehicle: ${this.vehicleId}`);
         const result = await new Connection(this.config, this.log, this.api).issueCommandRefresh(
           commandId,
           this.vehicleId,
@@ -142,30 +137,30 @@ export class Vehicle extends EventEmitter {
         }
       } catch (error: any) {
         this.updating = false;
-        this.log.error(`Error occurred during request: ${error.message}`);
         if (error.response) {
           // Log detailed information about the response if available
-          this.log.error(`Response status: ${error.response.status}`);
-          this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
-          this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+          this.log.error(`issueCommandRefresh Response status: ${error.response.status}`);
+          this.log.error(`issueCommandRefresh Response data: ${JSON.stringify(error.response.data)}`);
+          this.log.error(`issueCommandRefresh Response headers: ${JSON.stringify(error.response.headers)}`);
         } else if (error.request) {
           // Log information about the request
-          this.log.error(`Request made but no response received: ${error.request}`);
+          this.log.error(`issueCommandRefresh Request made but no response received: ${error.request}`);
         } else {
           // Log general error information
-          this.log.error(`Error details: ${JSON.stringify(error)}`);
+          this.log.error(`issueCommandRefresh Error details: ${JSON.stringify(error)}`);
         }
       }
     }
     return '';
   }
 
-  async retrieveVehicleInfo(vehicleId: string): Promise<void> {
-    const result = await new Connection(this.config, this.log, this.api).getVehicleInformation(vehicleId);
+  async retrieveVehicleInfo(): Promise<void> {
+    const result = await new Connection(this.config, this.log, this.api).getVehicleInformation(this.vehicleId);
     if (result) {
-      this.log.debug(`Result: ${JSON.stringify(result.vehicleDetails)}`);
       this.log.debug(
-        `Retrieved vehicle information for vehicle.  Mileage: ${result.vehicleDetails.mileage} Distance to E: ${result.vehicleDetails.batteryChargeLevel.distanceToEmpty} Tire Pressure Warning: ${result.vehicleStatus.tirePressureWarning}`,
+        `Retrieved vehicle information for vehicle.  Mileage: ${result.vehicleDetails.mileage} Distance to E: ${
+          result.vehicleDetails.batteryChargeLevel.distanceToEmpty * 0.621371
+        } Tire Pressure Warning: ${result.vehicleStatus.tirePressureWarning}`,
       );
       this.info = result as VehicleInfo;
       this.vehicleId = result.vehicleId;

@@ -44,6 +44,7 @@ export class Connection {
     this.config = config;
     this.log = log;
     this.api = api;
+    this.credentials = this.getCredentials();
   }
 
   async getVehicles(): Promise<Array<VehicleConfig>> {
@@ -62,18 +63,13 @@ export class Connection {
     };
 
     try {
-      this.log.debug('Requesting vehicles');
       const result = await axios(options);
       if (result.status < 300 && result.data) {
         const vehicles: Array<VehicleConfig> = [];
         for (const info of result.data.vehicles) {
           vehicles.push({ ...info, ...result.data.vehicles[0] });
         }
-
-        this.log.debug(`Found vehicles : ${JSON.stringify(vehicles, null, 2)}`);
         return vehicles;
-      } else {
-        this.log.error(`Vehicles failed with status: ${result.status}`);
       }
       return [];
     } catch (error: any) {
@@ -111,10 +107,8 @@ export class Connection {
     };
 
     try {
-      this.log.debug(`getVehicleInformation: ${JSON.stringify(options)}`);
       const result = await axios.request(options);
       if (result.status < 300 && result.data) {
-        this.log.debug(`Found vehicle info : ${JSON.stringify(result.data, null, 2)}`);
         if (result.data.status === 'SUCCESS') {
           return result.data.vehicle as VehicleInfo;
         }
@@ -171,8 +165,6 @@ export class Connection {
         Authorization: `Bearer ${this.credentials.access_token}`,
       },
     };
-
-    // this.log.debug(`issueCommand: ${JSON.stringify(options)}`);
     try {
       const result = await axios.request(options);
       if (result.status < 300 && result.data) {
@@ -249,18 +241,17 @@ export class Connection {
       }
       return {};
     } catch (error: any) {
-      this.log.error(`Error occurred during request: ${error.message}`);
       if (error.response) {
         // Log detailed information about the response if available
-        this.log.error(`Response status: ${error.response.status}`);
-        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
-        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+        this.log.error(`issueCommandRefresh Response status: ${error.response.status}`);
+        this.log.error(`issueCommandRefresh Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`issueCommandRefresh Response headers: ${JSON.stringify(error.response.headers)}`);
       } else if (error.request) {
         // Log information about the request
-        this.log.error(`Request made but no response received: ${error.request}`);
+        this.log.error(`issueCommandRefresh Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`issueCommandRefresh Error details: ${JSON.stringify(error)}`);
       }
       return {};
     }
@@ -316,8 +307,8 @@ export class Connection {
       };
 
       const res = await axios.request(options);
-      this.log.debug('Successfully got token from FordPass API');
       if (res.status === 200 && res.data.access_token) {
+        this.log.debug('Successfully got token from FordPass API');
         this.credentials.refresh_token = res.data.refresh_token;
         this.credentials.access_token = res.data.access_token;
         this.credentials.expires_in = res.data.expires_in;
@@ -330,15 +321,15 @@ export class Connection {
       this.log.error(`Error occurred during request: ${error.message}`);
       if (error.response) {
         // Log detailed information about the response if available
-        this.log.error(`Response status: ${error.response.status}`);
-        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
-        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+        this.log.error(`getAccessToken Response status: ${error.response.status}`);
+        this.log.error(`getAccessToken Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`getAccessToken Response headers: ${JSON.stringify(error.response.headers)}`);
       } else if (error.request) {
         // Log information about the request
         this.log.error(`Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`getAccessToken Error details: ${JSON.stringify(error)}`);
       }
     }
   }
@@ -376,39 +367,34 @@ export class Connection {
         this.log.error(`Auth failed with status: ${res.status}`);
       }
     } catch (error: any) {
-      this.log.error(`Error occurred during request: ${error.message}`);
       if (error.response) {
         // Log detailed information about the response if available
-        this.log.error(`Response status: ${error.response.status}`);
-        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
-        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+        this.log.error(`getRefreshToken Response status: ${error.response.status}`);
+        this.log.error(`getRefreshToken Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`getRefreshToken Response headers: ${JSON.stringify(error.response.headers)}`);
       } else if (error.request) {
         // Log information about the request
-        this.log.error(`Request made but no response received: ${error.request}`);
+        this.log.error(`getRefreshToken Request made but no response received: ${error.request}`);
       } else {
         // Log general error information
-        this.log.error(`Error details: ${JSON.stringify(error)}`);
+        this.log.error(`getRefreshToken Error details: ${JSON.stringify(error)}`);
       }
     }
   }
 
   async createOrUpdateCredentials(): Promise<SecurityConfig> {
     const storagePath = this.api.user.storagePath();
-    this.log.debug(`Storage path: ${storagePath}`);
-    const credentialsPath = `${storagePath}/security-credentials.json`;
+    const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
     if (!fs.existsSync(credentialsPath)) {
       fs.writeFileSync(credentialsPath, JSON.stringify(this.credentials));
-      this.log.debug('Credentials file created');
     } else {
       fs.writeFileSync(credentialsPath, JSON.stringify(this.credentials));
-      this.log.debug('Credentials file updated');
     }
     return this.getCredentials();
   }
 
   getCredentials(): SecurityConfig {
     try {
-      this.log.debug('Retrieving credentials');
       const storagePath = this.api.user.storagePath();
       const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
       if (fs.existsSync(credentialsPath)) {
@@ -416,7 +402,7 @@ export class Connection {
         return credentials;
       }
     } catch (error: any) {
-      this.log.error(`Error occurred retrieving credentials: ${error}`);
+      this.log.error(`getCredentials Error occurred retrieving credentials: ${error}`);
     }
     return { access_token: '', refresh_token: '', expires_in: 0 };
   }
