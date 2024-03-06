@@ -264,6 +264,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
         this.configureAccessory(accessory); // abusing the configureAccessory here
         this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [accessory]);
       }
+      this.vehicle = vehicles[0];
     }
   }
 
