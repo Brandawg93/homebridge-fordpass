@@ -25,8 +25,8 @@ Ford is locking accounts of users who use this plug-in. See #196 for more info.
 ## Prerequisites
 Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/fordpass/fordpass-sync-connect.html). Download the app or contact your local dealer to see if your vehicle is compatible with FordPass Connect.
 
-<a href="https://play.google.com/store/apps/details?id=com.ford.fordpass&hl=en_US&gl=US" aria-label="Google Play store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image"></a>&nbsp;
-<a href="https://apps.apple.com/us/app/fordpass/id1095418609" aria-label="Apple App Store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image"></a>
+<a href="https://play.google.com/store/apps/details?id=com.ford.fordpass&hl=en_US&gl=US" aria-label="Google Play store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image">Google Play Store</a>&nbsp;
+<a href="https://apps.apple.com/us/app/fordpass/id1095418609" aria-label="Apple App Store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image">Apple AppStore</a>
 
 ## Installation
 1. Install this plugin using: `npm install -g --unsafe-perm homebridge-fordpass`
