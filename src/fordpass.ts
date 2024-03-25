@@ -2,7 +2,7 @@ import { API, Logging } from 'homebridge';
 import { VehicleInfo, Command } from './types/vehicle';
 import { Connection } from './fordpass-connection';
 import { FordpassConfig } from './types/config';
-import { once, EventEmitter } from 'events';
+import { EventEmitter } from 'events';
 
 export class Vehicle extends EventEmitter {
   private config: FordpassConfig;

@@ -52,7 +52,6 @@ class FordPassPlatform implements DynamicPlatformPlugin {
   }
 
   configureAccessory(accessory: PlatformAccessory): void {
-    const self = this;
     this.log.info(`Configuring accessory ${accessory.displayName}`);
 
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {

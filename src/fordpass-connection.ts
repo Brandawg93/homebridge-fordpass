@@ -25,7 +25,7 @@ const vehicleStartChargeUrl = '/v1/vehicles/{vehicleId}/startCharge';
 const vehicleStartChargeRefreshUrl = '/v1/vehicles/{vehicleId}/startCharge/{commandId}';
 const vehicleStopChargeUrl = '/v1/vehicles/{vehicleId}/stopCharge';
 const vehicleStopChargeRefreshUrl = '/v1/vehicles/{vehicleId}/stopCharge/{commandId}';
-const vehicleCapabilitiesUrl = '/v3/vehicles/{vehicleId}/capabilities';
+// const vehicleCapabilitiesUrl = '/v3/vehicles/{vehicleId}/capabilities';
 const vehicleInformationUrl = '/v3/vehicles/{vehicleId}';
 
 const headers = {
@@ -102,7 +102,7 @@ export class Connection {
       headers: {
         'Content-Type': 'application/json',
         'Application-Id': this.config.application_id,
-        'Authorization': `Bearer ${this.credentials.access_token}`,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
     };
 

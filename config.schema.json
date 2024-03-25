@@ -3,67 +3,67 @@
   "pluginType": "platform",
   "singular": true,
   "schema": {
-      "type": "object",
-      "properties": {
-        "batteryName": {
-          "title": "Battery Name",
-          "description": "The name to be used for the battery indicator.",
-          "type": "string",
-          "default": "Fuel Level"
-        },
-        "autoRefresh": {
-          "title": "Auto-refresh",
-          "description": "Note: This will use your vehicle's battery to refresh data.",
-          "type": "boolean",
-          "default": false
-        },
-        "refreshRate": {
-          "title": "Refresh rate (in minutes)",
-          "description": "Note: Faster refresh times will significantly drain your vehicle's battery.",
-          "type": "integer",
-          "default": 180,
-          "minimum": 60,
-          "maximum": 720,
-          "condition": {
-            "functionBody": "return model.options.autoRefresh === true;"
-          }          
-        },
-        "chargingSwitch": {
-          "title": "Charging Switch",
-          "description": "Adds a button that can trigger automations when your electric vehicle begins charging.",
-          "type": "boolean",
-          "default": false
-        },
-        "plugSwitch": {
-          "title": "Plug Switch",
-          "description": "Adds an occupancy sensor that can trigger automations when your electric vehicle is plugged into the charging port.",
-          "type": "boolean",
-          "default": false
-        },
-        "application_id": {
-          "title": "Application ID",
-          "type": "string",
-          "required": true,
-          "description": "Enter the application ID from the FordPass API app when you requested access.  Usually starts with 1"
-        },
-        "client_id": {
-          "title": "Client ID",
-          "type": "string",
-          "required": true,
-          "description": "Enter the client ID from the FordPass API app when you requested access.  Usually starts with 1"
-        },
-        "client_secret": {
-          "title": "Client Secret",
-          "type": "string",
-          "required": true,
-          "description": "Enter the client secret from the FordPass API app when you requested access.  Usually starts with RHO"
-        },
-        "code": {
-          "title": "Code",
-          "type": "string",
-          "required": true,
-          "description": "Enter the code from the FordPass API app"
+    "type": "object",
+    "properties": {
+      "batteryName": {
+        "title": "Battery Name",
+        "description": "The name to be used for the battery indicator.",
+        "type": "string",
+        "default": "Fuel Level"
+      },
+      "autoRefresh": {
+        "title": "Auto-refresh",
+        "description": "Note: This will use your vehicle's battery to refresh data.",
+        "type": "boolean",
+        "default": false
+      },
+      "refreshRate": {
+        "title": "Refresh rate (in minutes)",
+        "description": "Note: Faster refresh times will significantly drain your vehicle's battery.",
+        "type": "integer",
+        "default": 180,
+        "minimum": 60,
+        "maximum": 720,
+        "condition": {
+          "functionBody": "return model.options.autoRefresh === true;"
         }
+      },
+      "chargingSwitch": {
+        "title": "Charging Switch",
+        "description": "Adds a button that can trigger automations when your electric vehicle begins charging.",
+        "type": "boolean",
+        "default": false
+      },
+      "plugSwitch": {
+        "title": "Plug Switch",
+        "description": "Adds an occupancy sensor that can trigger automations when your electric vehicle is plugged into the charging port.",
+        "type": "boolean",
+        "default": false
+      },
+      "application_id": {
+        "title": "Application ID",
+        "type": "string",
+        "required": true,
+        "description": "Enter the application ID from the FordPass API app when you requested access.  Usually starts with 1"
+      },
+      "client_id": {
+        "title": "Client ID",
+        "type": "string",
+        "required": true,
+        "description": "Enter the client ID from the FordPass API app when you requested access.  Usually starts with 1"
+      },
+      "client_secret": {
+        "title": "Client Secret",
+        "type": "string",
+        "required": true,
+        "description": "Enter the client secret from the FordPass API app when you requested access.  Usually starts with RHO"
+      },
+      "code": {
+        "title": "Code",
+        "type": "string",
+        "required": true,
+        "description": "Enter the code from the FordPass API app"
       }
+    }
   }
 }
