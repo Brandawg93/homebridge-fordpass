@@ -37,7 +37,6 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     this.log = log;
     this.api = api;
     this.config = config as FordpassConfig;
-
     // Need a config or plugin will not start
     if (!config) {
       return;
@@ -58,7 +57,7 @@ class FordPassPlatform implements DynamicPlatformPlugin {
       this.log.info(`${accessory.displayName} identified!`);
     });
 
-    this.vehicle = new Vehicle(accessory.context.name, accessory.context.vin, this.config, this.log, this.api);
+    this.vehicle = new Vehicle(accessory.context.name, accessory.context.vehicleId, this.config, this.log, this.api);
     const fordAccessory = new FordpassAccessory(accessory);
 
     // Create Lock service
@@ -293,7 +292,9 @@ class FordPassPlatform implements DynamicPlatformPlugin {
     if (vehicles) {
       const vehicleConfig = vehicles[0] as VehicleConfig;
       vehicleConfig.vehicleId = vehicleConfig.vehicleId.toUpperCase();
-      this.vehicle.vehicleId = vehicleConfig.vehicleId;
+      if (!this.vehicle) {
+        this.vehicle = new Vehicle(vehicleConfig.nickName, vehicleConfig.vehicleId, this.config, this.log, this.api);
+      }
       const name =
         vehicleConfig.nickName || vehicleConfig.modelYear + ' ' + vehicleConfig.make + ' ' + vehicleConfig.modelName;
       const uuid = hap.uuid.generate(vehicleConfig.vehicleId);
