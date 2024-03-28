@@ -1,42 +1,35 @@
-import { Logging } from 'homebridge';
+import { API, Logging } from 'homebridge';
 import { AxiosRequestConfig } from 'axios';
 import axios from 'axios';
-import { FordpassConfig, VehicleConfig } from './types/config';
-import crypto from 'crypto';
-import base64url from 'base64url';
+import { FordpassConfig, VehicleConfig, SecurityConfig } from './types/config';
 import { URLSearchParams } from 'url';
-import { User } from './types/user';
+import FormData from 'form-data';
+import { VehicleInfo } from './types/vehicle';
+import fs from 'fs';
 
-const vehiclesUrl = 'https://api.mps.ford.com/api/expdashboard/v1/details';
-const userUrl = 'https://api.mps.ford.com/api/users';
-const catWithRefreshTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-refresh-token';
-const catWithCIAccessTokenUrl = 'https://api.mps.ford.com/api/token/v2/cat-with-ci-access-token';
-const authorizeUrl = 'https://sso.ci.ford.com/v1.0/endpoint/default/authorize';
-const tokenUrl = 'https://sso.ci.ford.com/oidc/endpoint/default/token';
-const autonomicUrl = 'https://accounts.autonomic.ai/v1/auth/oidc/token';
-
-const defaultAppId = '71A3AD0A-CF46-4CCF-B473-FC7FE5BC4592';
-const clientId = '9fb503e0-715b-47e8-adfd-ad4b7770f73b';
-const userAgent = 'FordPass/5 CFNetwork/1333.0.4 Darwin/21.5.0';
-
-const randomStr = (len: number): string => {
-  let result = '';
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  const charactersLength = characters.length;
-  for (let i = 0; i < len; i++) {
-    result += characters.charAt(Math.floor(Math.random() * charactersLength));
-  }
-  return result;
-};
-
-const codeChallenge = (str: string): string => {
-  const hash = crypto.createHash('sha256');
-  hash.update(str);
-  return base64url(hash.digest());
-};
+const authorizeUrl =
+  'https://dah2vb2cprod.b2clogin.com/914d88b1-3523-4bf6-9be4-1b96b4f6f919/oauth2/v2.0/token?p=B2C_1A_signup_signin_common';
+const baseApiUrl = 'https://api.mps.ford.com/api/fordconnect';
+const vehiclesUrl = '/v2/vehicles';
+const vehicleStatusUrl = '/v1/vehicles/{vehicleId}/status';
+const vehicleSatusRefreshUrl = '/v1/vehicles/{vehicleId}/statusrefresh/{commandId}';
+const vehicleUnlockUrl = '/v1/vehicles/{vehicleId}/unlock';
+const vehicleUnlockRefreshUrl = '/v1/vehicles/{vehicleId}/unlock/{commandId}';
+const vehicleLockUrl = '/v1/vehicles/{vehicleId}/lock';
+const vehicleLockRefreshUrl = '/v1/vehicles/{vehicleId}/lock/{commandId}';
+const vehicleStartUrl = '/v1/vehicles/{vehicleId}/startEngine';
+const vehicleStartRefreshUrl = '/v1/vehicles/{vehicleId}/start/{commandId}';
+const vehicleStopUrl = '/v1/vehicles/{vehicleId}/stop';
+const vehicleStopRefreshUrl = '/v1/vehicles/{vehicleId}/stop/{commandId}';
+const vehicleStartChargeUrl = '/v1/vehicles/{vehicleId}/startCharge';
+const vehicleStartChargeRefreshUrl = '/v1/vehicles/{vehicleId}/startCharge/{commandId}';
+const vehicleStopChargeUrl = '/v1/vehicles/{vehicleId}/stopCharge';
+const vehicleStopChargeRefreshUrl = '/v1/vehicles/{vehicleId}/stopCharge/{commandId}';
+// const vehicleCapabilitiesUrl = '/v3/vehicles/{vehicleId}/capabilities';
+const vehicleInformationUrl = '/v3/vehicles/{vehicleId}';
 
 const headers = {
-  'User-Agent': userAgent,
+  'User-Agent': 'Mozilla/5.0',
   'Accept-Language': 'en-US,en;q=0.9',
   'Accept-Encoding': 'gzip, deflate, br',
 };
@@ -44,304 +37,373 @@ const headers = {
 export class Connection {
   private config: FordpassConfig;
   private readonly log: Logging;
-  private applicationId: string;
+  private readonly api: API;
+  private credentials!: SecurityConfig;
 
-  constructor(config: FordpassConfig, log: Logging) {
+  constructor(config: FordpassConfig, log: Logging, api: API) {
     this.config = config;
     this.log = log;
-    this.applicationId = config.options?.region || defaultAppId;
-  }
-
-  async refreshAuth(): Promise<any> {
-    try {
-      if (this.config.refresh_token) {
-        const result = await axios.post(
-          catWithRefreshTokenUrl,
-          {
-            refresh_token: this.config.refresh_token,
-          },
-          {
-            headers: {
-              'Content-Type': 'application/json',
-              'Application-Id': this.applicationId,
-              ...headers,
-            },
-          },
-        );
-        if (result.status === 200 && result.data.access_token) {
-          this.config.access_token = result.data.access_token;
-          this.config.refresh_token = result.data.refresh_token;
-          return this.getAutonomicToken(result.data.access_token);
-        } else {
-          this.log.error(`Auth failed with status: ${result.status}`);
-        }
-      } else {
-        return await this.auth();
-      }
-      return;
-    } catch (error: any) {
-      this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
-      return;
-    }
-  }
-
-  async getUser(): Promise<User | undefined> {
-    if (!this.config.access_token) {
-      return;
-    }
-    const options: AxiosRequestConfig = {
-      method: 'GET',
-      url: userUrl,
-      headers: {
-        'Content-Type': 'application/json',
-        'Auth-Token': this.config.access_token,
-        'Application-Id': this.applicationId,
-        ...headers,
-      },
-    };
-
-    try {
-      const result = await axios(options);
-      if (result.status === 200 && result.data) {
-        return result.data.profile as User;
-      } else {
-        this.log.error(`User failed with status: ${result.status}`);
-      }
-      return;
-    } catch (error: any) {
-      this.log.error(`User failed with error: ${error.code || error.response.status}`);
-      return;
-    }
+    this.api = api;
+    this.credentials = this.getCredentials();
   }
 
   async getVehicles(): Promise<Array<VehicleConfig>> {
-    const user = await this.getUser();
-
-    if (!this.config.access_token || !user) {
-      return [];
+    if (!this.credentials.access_token) {
+      await this.auth();
     }
 
     const options: AxiosRequestConfig = {
-      method: 'POST',
-      url: vehiclesUrl,
+      method: 'GET',
+      url: baseApiUrl + vehiclesUrl,
       headers: {
         'Content-Type': 'application/json',
-        'Auth-Token': this.config.access_token,
-        'Application-Id': this.applicationId,
-        locale: user.language,
-        countryCode: user.country,
-        ...headers,
+        'Application-Id': this.config.application_id,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
-      data: JSON.stringify({
-        dashboardRefreshRequest: 'All',
-      }),
     };
 
     try {
       const result = await axios(options);
       if (result.status < 300 && result.data) {
         const vehicles: Array<VehicleConfig> = [];
-        for (const info of result.data.userVehicles.vehicleDetails) {
-          vehicles.push({ ...info, ...result.data.vehicleProfile.find((v: any) => v.VIN === info.VIN) });
+        for (const info of result.data.vehicles) {
+          vehicles.push({ ...info, ...result.data.vehicles[0] });
         }
-
-        this.log.debug(`Found vehicles : ${JSON.stringify(vehicles, null, 2)}`);
         return vehicles;
-      } else {
-        this.log.error(`Vehicles failed with status: ${result.status}`);
       }
       return [];
     } catch (error: any) {
-      this.log.error(`Vehicles failed with error: ${error.code || error.response.status}`);
+      this.log.error(`Error occurred during request: ${error.message}`);
+      if (error.response) {
+        // Log detailed information about the response if available
+        this.log.error(`Response status: ${error.response.status}`);
+        this.log.error(`Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`Response headers: ${JSON.stringify(error.response.headers)}`);
+      } else if (error.request) {
+        // Log information about the request
+        this.log.error(`Request made but no response received: ${error.request}`);
+      } else {
+        // Log general error information
+        this.log.error(`Error details: ${JSON.stringify(error)}`);
+      }
       return [];
     }
   }
 
-  async auth(): Promise<any> {
-    const numOfRedirects = 2;
-    const code = randomStr(43);
-    let cookies = undefined;
-    const url = `${authorizeUrl}?redirect_uri=fordapp://userauthorized&response_type=code&scope=openid&max_age=3600&client_id=9fb503e0-715b-47e8-adfd-ad4b7770f73b&code_challenge=${codeChallenge(
-      code,
-    )}&code_challenge_method=S256`;
-    let nextUrl = url;
-    for (let i = 0; i < numOfRedirects; i++) {
-      const options: AxiosRequestConfig = {
-        method: 'GET',
-        maxRedirects: 0,
-        url: nextUrl,
-        headers: {
-          ...headers,
-        },
-      };
-
-      if (options.headers && cookies) {
-        options.headers.cookie = cookies;
-      }
-
-      try {
-        // eslint-disable-next-line no-await-in-loop
-        await axios(options);
-        throw new Error('Authentication failed');
-      } catch (err: any) {
-        if (err?.response?.status === 302) {
-          nextUrl = err.response.headers.location;
-          cookies = err.response.headers['set-cookie'];
-        } else {
-          this.log.error(`Auth failed with status: ${err.status}`);
-        }
-      }
+  async getVehicleInformation(vehicleId: string): Promise<VehicleInfo> {
+    if (!this.credentials.access_token) {
+      await this.auth();
     }
-    return this.doLogin(nextUrl, code, cookies);
-  }
 
-  private async doLogin(url: string, code_verifier: string, cookies: string | number | boolean): Promise<any> {
-    if (!this.config.username || !this.config.password) {
-      throw new Error('Username or password is empty in config');
-    }
-    const options: AxiosRequestConfig = {
-      method: 'POST',
-      maxRedirects: 0,
-      url: url,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        cookie: cookies,
-        ...headers,
-      },
-      data: new URLSearchParams({
-        operation: 'verify',
-        'login-form-type': 'pwd',
-        username: this.config.username,
-        password: this.config.password,
-      }).toString(),
-    };
-
-    try {
-      await axios(options);
-      throw new Error('Authentication failed');
-    } catch (err: any) {
-      if (err?.response?.status === 302) {
-        const nextUrl = err.response.headers.location;
-        const cookies = err.response.headers['set-cookie'];
-        return this.getAuthorizationCode(nextUrl, code_verifier, cookies);
-      } else {
-        this.log.error(`Auth failed with status: ${err.status}`);
-      }
-    }
-  }
-
-  private async getAuthorizationCode(
-    url: string,
-    code_verifier: string,
-    cookies: string | number | boolean,
-  ): Promise<any> {
+    const url = baseApiUrl + vehicleInformationUrl.replace('{vehicleId}', vehicleId);
     const options: AxiosRequestConfig = {
       method: 'GET',
-      maxRedirects: 0,
       url: url,
       headers: {
-        cookie: cookies,
-        ...headers,
+        'Content-Type': 'application/json',
+        'Application-Id': this.config.application_id,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
     };
 
     try {
-      await axios(options);
-      throw new Error('Authentication failed');
-    } catch (err: any) {
-      if (err?.response?.status === 302) {
-        const nextUrl = err.response.headers.location;
-        const params = new URLSearchParams(nextUrl.split('?')[1]);
-        const code = params.get('code');
-        if (code) {
-          return this.getAccessToken(code, code_verifier);
+      const result = await axios.request(options);
+      if (result.status < 300 && result.data) {
+        if (result.data.status === 'SUCCESS') {
+          return result.data.vehicle as VehicleInfo;
         }
+
+        return {} as VehicleInfo;
       } else {
-        this.log.error(`Auth failed with status: ${err.status}`);
+        this.log.error(`Vehicle info failed with status: ${result.status}`);
       }
+      return {} as VehicleInfo;
+    } catch (error: any) {
+      this.log.error(`Vehicle info failed with error: ${error.code || error.response.status}`);
+      return {} as VehicleInfo;
     }
   }
 
-  private async getAccessToken(code: string, code_verifier: string): Promise<any> {
+  async issueCommand(vehicleId: string, command: string): Promise<any> {
+    if (!this.credentials.access_token) {
+      await this.auth();
+    }
+
+    let url = '';
+    switch (command) {
+      case 'unlock':
+        url = vehicleUnlockUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'lock':
+        url = vehicleLockUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'start':
+        url = vehicleStartUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'stop':
+        url = vehicleStopUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'startCharge':
+        url = vehicleStartChargeUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'stopCharge':
+        url = vehicleStopChargeUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'status':
+        url = vehicleStatusUrl.replace('{vehicleId}', vehicleId);
+        break;
+      default:
+        break;
+    }
+
     const options: AxiosRequestConfig = {
       method: 'POST',
-      url: tokenUrl,
+      url: baseApiUrl + url.replace('{vehicleId}', vehicleId),
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        ...headers,
+        'Content-Type': 'application/json',
+        'Application-Id': this.config.application_id,
+        Authorization: `Bearer ${this.credentials.access_token}`,
       },
-      data: new URLSearchParams({
-        client_id: clientId,
-        grant_type: 'authorization_code',
-        scope: 'openid',
-        redirect_uri: 'fordapp://userauthorized',
-        code: code,
-        code_verifier: code_verifier,
-      }).toString(),
     };
-
     try {
-      const res = await axios(options);
-      if (res.status === 200 && res.data.access_token) {
-        return this.getRefreshToken(res.data.access_token);
+      const result = await axios.request(options);
+      if (result.status < 300 && result.data) {
+        return result.data;
+      } else {
+        this.log.error(`Command failed with status: ${JSON.stringify(result)}`);
       }
-    } catch (err: any) {
-      this.log.error(`Auth failed with error: ${err}`);
+      return {};
+    } catch (error: any) {
+      this.log.error(`Command failed with error: ${JSON.stringify(error)}`);
+      return {};
     }
   }
 
-  private async getRefreshToken(access_token: string): Promise<any> {
+  async issueCommandRefresh(commandId: string, vehicleId: string, command: string): Promise<any> {
+    if (!this.credentials.access_token) {
+      await this.auth();
+    }
+
+    let url = '';
+    switch (command) {
+      case 'unlock':
+        url = vehicleUnlockRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'lock':
+        url = vehicleLockRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'start':
+        url = vehicleStartRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'stop':
+        url = vehicleStopRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'startCharge':
+        url = vehicleStartChargeRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'stopCharge':
+        url = vehicleStopChargeRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      case 'status':
+        url = vehicleSatusRefreshUrl.replace('{vehicleId}', vehicleId);
+        break;
+      default:
+        break;
+    }
+
+    const options: AxiosRequestConfig = {
+      method: 'GET',
+      url: baseApiUrl + url.replace('{commandId}', commandId),
+      headers: {
+        'Content-Type': 'application/json',
+        'Application-Id': this.config.application_id,
+        Authorization: `Bearer ${this.credentials.access_token}`,
+      },
+    };
+
     try {
-      const res = await axios.post(
-        catWithCIAccessTokenUrl,
-        {
-          ciToken: access_token,
+      const result = await axios.request(options);
+      if (result.status < 300 && result.data) {
+        // While result.data.commandStatus === 'QUEUED' we need to keep polling
+        // until result.data.commandStatus === 'SUCCESS' or 'FAILED'
+        let commandStatus = result.data.commandStatus;
+        let tries = 10;
+        while (commandStatus === 'QUEUED' && tries > 0) {
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          const refreshResult = await axios(options);
+          commandStatus = refreshResult.data.commandStatus;
+          tries--;
+        }
+
+        return result.data;
+      } else {
+        this.log.error(`Command failed with status: ${JSON.stringify(result)}`);
+      }
+      return {};
+    } catch (error: any) {
+      if (error.response) {
+        // Log detailed information about the response if available
+        this.log.error(`issueCommandRefresh Response status: ${error.response.status}`);
+        this.log.error(`issueCommandRefresh Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`issueCommandRefresh Response headers: ${JSON.stringify(error.response.headers)}`);
+      } else if (error.request) {
+        // Log information about the request
+        this.log.error(`issueCommandRefresh Request made but no response received: ${error.request}`);
+      } else {
+        // Log general error information
+        this.log.error(`issueCommandRefresh Error details: ${JSON.stringify(error)}`);
+      }
+      return {};
+    }
+  }
+
+  /**
+   * Authenticates the user and returns the access token or refresh token.
+   * If the refresh token is available, it will be used to get a new access token.
+   * If the refresh token is not available, the access token will be obtained using the code and client secret.
+   * @returns A promise that resolves to the access token or refresh token.
+   */
+  async auth(): Promise<any> {
+    this.credentials = this.getCredentials();
+    if (!this.config.code && !this.config.client_secret) {
+      this.log.error('Missing code or client_secret');
+      return;
+    }
+
+    if (!this.credentials.refresh_token) {
+      return await this.getAccessToken();
+    } else {
+      const refreshToken = await this.getRefreshToken();
+      return refreshToken;
+    }
+  }
+
+  /**
+   * Retrieves the access token for the FordPass API.
+   * @returns A Promise that resolves to the access token.
+   */
+  async getAccessToken(): Promise<any> {
+    try {
+      if (!this.config.code || !this.config.client_secret || !this.config.client_id) {
+        this.log.error('Missing code or client_secret, or client_id');
+        return;
+      }
+      const data = new URLSearchParams();
+      data.append('grant_type', 'authorization_code');
+      data.append('client_id', this.config.client_id);
+      data.append('client_secret', this.config.client_secret);
+      data.append('code', this.config.code);
+      data.append('redirect_url', 'https://localhost:3000');
+
+      const options: AxiosRequestConfig = {
+        method: 'post',
+        url: authorizeUrl,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          ...headers,
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'Application-Id': this.applicationId,
-            ...headers,
-          },
-        },
-      );
+        maxBodyLength: Infinity,
+        data: data.toString(),
+      };
+
+      const res = await axios.request(options);
       if (res.status === 200 && res.data.access_token) {
-        this.config.access_token = res.data.access_token;
-        this.config.refresh_token = res.data.refresh_token;
-        return this.getAutonomicToken(res.data.access_token);
+        this.log.debug('Successfully got token from FordPass API');
+        this.credentials.refresh_token = res.data.refresh_token;
+        this.credentials.access_token = res.data.access_token;
+        this.credentials.expires_in = res.data.expires_in;
+        return this.getRefreshToken();
+      }
+    } catch (error: any) {
+      this.log.error(
+        "Auth failed for FordPass.  Please follow the FordPass API Setup instructions to retrieve the 'code'.",
+      );
+      this.log.error(`Error occurred during request: ${error.message}`);
+      if (error.response) {
+        // Log detailed information about the response if available
+        this.log.error(`getAccessToken Response status: ${error.response.status}`);
+        this.log.error(`getAccessToken Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`getAccessToken Response headers: ${JSON.stringify(error.response.headers)}`);
+      } else if (error.request) {
+        // Log information about the request
+        this.log.error(`Request made but no response received: ${error.request}`);
+      } else {
+        // Log general error information
+        this.log.error(`getAccessToken Error details: ${JSON.stringify(error)}`);
+      }
+    }
+  }
+
+  /**
+   * Retrieves a refresh token from the server.
+   * @returns A Promise that resolves to the response data from the server.
+   */
+  async getRefreshToken(): Promise<any> {
+    try {
+      const data = new FormData();
+      data.append('grant_type', 'refresh_token');
+      data.append('refresh_token', this.credentials.refresh_token);
+      data.append('client_id', this.config.client_id);
+      data.append('client_secret', this.config.client_secret);
+
+      const options = {
+        method: 'post',
+        maxBodyLength: Infinity,
+        url: authorizeUrl,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...data.getHeaders(),
+        },
+        data: data,
+      };
+      const res = await axios.request(options);
+      if (res.status === 200 && res.data.access_token) {
+        this.credentials.access_token = res.data.access_token;
+        this.credentials.refresh_token = res.data.refresh_token;
+        this.credentials.expires_in = res.data.expires_in;
+        this.createOrUpdateCredentials();
+        return res.data;
       } else {
         this.log.error(`Auth failed with status: ${res.status}`);
       }
     } catch (error: any) {
-      this.log.error(`Auth failed with error: ${error.code || error.response.status}`);
+      if (error.response) {
+        // Log detailed information about the response if available
+        this.log.error(`getRefreshToken Response status: ${error.response.status}`);
+        this.log.error(`getRefreshToken Response data: ${JSON.stringify(error.response.data)}`);
+        this.log.error(`getRefreshToken Response headers: ${JSON.stringify(error.response.headers)}`);
+      } else if (error.request) {
+        // Log information about the request
+        this.log.error(`getRefreshToken Request made but no response received: ${error.request}`);
+      } else {
+        // Log general error information
+        this.log.error(`getRefreshToken Error details: ${JSON.stringify(error)}`);
+      }
     }
   }
 
-  private async getAutonomicToken(access_token: string): Promise<any> {
-    const options: AxiosRequestConfig = {
-      method: 'POST',
-      url: autonomicUrl,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        ...headers,
-      },
-      data: new URLSearchParams({
-        client_id: 'fordpass-prod',
-        grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
-        subject_token: access_token,
-        subject_token_type: 'urn:ietf:params:oauth:token-type:jwt',
-        subject_issuer: 'fordpass',
-      }).toString(),
-    };
-
-    try {
-      const res = await axios(options);
-      if (res.status === 200 && res.data.access_token) {
-        this.config.autonomic_token = res.data.access_token;
-        return res.data;
-      }
-    } catch (err: any) {
-      this.log.error(`Auth failed with error: ${err}`);
+  async createOrUpdateCredentials(): Promise<SecurityConfig> {
+    const storagePath = this.api.user.storagePath();
+    const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
+    if (!fs.existsSync(credentialsPath)) {
+      fs.writeFileSync(credentialsPath, JSON.stringify(this.credentials));
+    } else {
+      fs.writeFileSync(credentialsPath, JSON.stringify(this.credentials));
     }
+    return this.getCredentials();
+  }
+
+  getCredentials(): SecurityConfig {
+    try {
+      const storagePath = this.api.user.storagePath();
+      const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
+      if (fs.existsSync(credentialsPath)) {
+        const credentials = JSON.parse(fs.readFileSync(credentialsPath).toString());
+        return credentials;
+      }
+    } catch (error: any) {
+      this.log.error(`getCredentials Error occurred retrieving credentials: ${error}`);
+    }
+    return { access_token: '', refresh_token: '', expires_in: 0 };
   }
 }
