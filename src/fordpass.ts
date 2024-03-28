@@ -157,11 +157,6 @@ export class Vehicle extends EventEmitter {
   async retrieveVehicleInfo(): Promise<void> {
     const result = await new Connection(this.config, this.log, this.api).getVehicleInformation(this.vehicleId);
     if (result) {
-      this.log.debug(
-        `Retrieved vehicle information for vehicle.  Mileage: ${result.vehicleDetails.mileage} Distance to E: ${
-          result.vehicleDetails.batteryChargeLevel.distanceToEmpty * 0.621371
-        } Tire Pressure Warning: ${result.vehicleStatus.tirePressureWarning}`,
-      );
       this.info = result as VehicleInfo;
       this.vehicleId = result.vehicleId;
       this.name = result.nickName;
