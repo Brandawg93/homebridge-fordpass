@@ -38,18 +38,18 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 
 ### Config.json Example
 
-```
+```json
 {
-    "batteryName": "Battery",
-    "autoRefresh": true,
-    "refreshRate": 30,
-    "chargingSwitch": true,
-    "plugSwitch": true,
-    "application_id": "APPLICATION_ID",
-    "client_id": "CLIENT_ID",
-    "client_secret": "SECRET_ID",
-    "code": "FORD_AUTH_CODE",
-    "platform": "FordPass"
+  "batteryName": "Battery",
+  "autoRefresh": true,
+  "refreshRate": 30,
+  "chargingSwitch": true,
+  "plugSwitch": true,
+  "application_id": "APPLICATION_ID",
+  "client_id": "CLIENT_ID",
+  "client_secret": "SECRET_ID",
+  "code": "FORD_AUTH_CODE",
+  "platform": "FordPass"
 }
 ```
 
@@ -60,10 +60,7 @@ Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/ford
 3. Go to [FordConnect](https://developer.ford.com/apis/fordconnect) and request access.
 4. Create Application Credentials at [https://developer.ford.com/my-developer-account/my-dashboard](https://developer.ford.com/my-developer-account/my-dashboard) and copy Secret 1 Hint.
 5. Paste Secret into "client_secret" property of config.
-6. Construct this URL in your Browser:
-
-https://fordconnect.cv.ford.com/common/login/?make=F&application_id=AFDC085B-377A-4351-B23E-5E1D35FB3700&client_id=30990062-9618-40e1-a27b-7c6bcb23658a&response_type=code&state=123&redirect_uri=https%3A%2F%2Flocalhost%3A3000&scope=access
-
+6. Construct this URL in your Browser: https://fordconnect.cv.ford.com/common/login/?make=F&application_id=AFDC085B-377A-4351-B23E-5E1D35FB3700&client_id=30990062-9618-40e1-a27b-7c6bcb23658a&response_type=code&state=123&redirect_uri=https%3A%2F%2Flocalhost%3A3000&scope=access
 7. application_id and client_id may be different. Review the FordPass API Documentation found in the Ford Developer website to verify if different. application_id goes into "application_id" of config and client_id goes into "client_id" of config.
 8. Sign in with your FordPass login that you use for FordPass' app.
 9. Select the car you wish to integrate with.

@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge FordPass",
   "name": "homebridge-fordpass",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "description": "Fordpass plugin for homebridge: https://homebridge.io/",
   "main": "dist/index.js",
   "license": "GPL-3.0",
@@ -41,8 +41,8 @@
     "url": "https://github.com/Brandawg93/homebridge-fordpass/issues"
   },
   "engines": {
-    "node": ">=10",
-    "homebridge": ">=1.0.0"
+    "node": "^18.15.0 || ^20.7.0",
+    "homebridge": ">=1.7.0"
   },
   "files": [
     "LICENSE",
@@ -50,7 +50,7 @@
     "config.schema.json"
   ],
   "dependencies": {
-    "axios": "^1.5.1",
+    "axios": "^1.7.2",
     "base64url": "^3.0.1",
     "form-data": "^4.0.0"
   },
