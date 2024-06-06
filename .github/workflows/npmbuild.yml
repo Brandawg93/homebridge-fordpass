@@ -3,9 +3,9 @@ name: build
 on:
   push:
     paths: '**.ts' # only run on modified typescript files
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 jobs:
   build:
     runs-on: ubuntu-latest

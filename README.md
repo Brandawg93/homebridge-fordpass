@@ -20,39 +20,66 @@ Control your Ford vehicle in HomeKit using [Homebridge](https://github.com/nfari
 [![GitHub commits since latest release (by date)](https://img.shields.io/github/commits-since/brandawg93/homebridge-fordpass/latest?logo=github)](https://github.com/Brandawg93/homebridge-fordpass/releases/latest)
 
 ## WARNING
-Ford is locking accounts of users who use this plug-in. See #196 for more info. 
+
+Ford is locking accounts of users who use this plug-in. See #196 for more info.
 
 ## Prerequisites
+
 Your vehicle must be connected to [FordPass Connect](https://owner.ford.com/fordpass/fordpass-sync-connect.html). Download the app or contact your local dealer to see if your vehicle is compatible with FordPass Connect.
 
-<a href="https://c00.adobe.com/v3/6b72dd687901669e3ed55059dd6f60d5d3c844c25518eefaff82ed287725d462/start?a_dl=5ad0dab8511fb41c63233b99" aria-label="Google Play store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image">  
-<img alt="Google Play" src="https://owner.ford.com/ownerlibs/content/dam/ford-dot-com/cx_en_english/FordPass/1_LINCOLN-GOOGLE-store.png"></a>
-<a href="https://c00.adobe.com/v3/6b72dd687901669e3ed55059dd6f60d5d3c844c25518eefaff82ed287725d462/start?a_dl=5ad0da2e511fb41c63233b8e" aria-label="Apple App Store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image"><img alt="Apple App Store" src="https://owner.ford.com/ownerlibs/content/dam/ford-dot-com/cx_en_english/FordPass/1_LINCOLN-APPLE-store.png"></a>
+<a href="https://play.google.com/store/apps/details?id=com.ford.fordpass&hl=en_US&gl=US" aria-label="Google Play store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image">Google Play Store</a>&nbsp;
+<a href="https://apps.apple.com/us/app/fordpass/id1095418609" aria-label="Apple App Store opens in new tab or window" target="_blank" class="cx-cta cx-cta--image">Apple AppStore</a>
 
 ## Installation
+
 1. Install this plugin using: `npm install -g --unsafe-perm homebridge-fordpass`
 2. Add username, passwrod, and vehicles to `config.json`
 3. Run [Homebridge](https://github.com/nfarina/homebridge)
 
 ### Config.json Example
+
 ```
 {
-    "username": "YOUR_USERNAME",
-    "password": "YOUR_PASSWORD",
-    "options": {
-        "autoRefresh": false
-    },
+    "batteryName": "Battery",
+    "autoRefresh": true,
+    "refreshRate": 30,
+    "chargingSwitch": true,
+    "plugSwitch": true,
+    "application_id": "APPLICATION_ID",
+    "client_id": "CLIENT_ID",
+    "client_secret": "SECRET_ID",
+    "code": "FORD_AUTH_CODE",
     "platform": "FordPass"
 }
 ```
 
+## FordPass API Signup Process
+
+1. First, you MUST have a FordPass account. If you don't, you will need to do that first and that's outside of the scope for these instructions. [Start here](https://www.ford.com/support/how-tos/fordpass/getting-started-with-fordpass/download-fordpass/)
+2. Sign up at FordPass API program at [developer.ford.com](https://developer.ford.com/).
+3. Go to [FordConnect](https://developer.ford.com/apis/fordconnect) and request access.
+4. Create Application Credentials at [https://developer.ford.com/my-developer-account/my-dashboard](https://developer.ford.com/my-developer-account/my-dashboard) and copy Secret 1 Hint.
+5. Paste Secret into "client_secret" property of config.
+6. Construct this URL in your Browser:
+
+https://fordconnect.cv.ford.com/common/login/?make=F&application_id=AFDC085B-377A-4351-B23E-5E1D35FB3700&client_id=30990062-9618-40e1-a27b-7c6bcb23658a&response_type=code&state=123&redirect_uri=https%3A%2F%2Flocalhost%3A3000&scope=access
+
+7. application_id and client_id may be different. Review the FordPass API Documentation found in the Ford Developer website to verify if different. application_id goes into "application_id" of config and client_id goes into "client_id" of config.
+8. Sign in with your FordPass login that you use for FordPass' app.
+9. Select the car you wish to integrate with.
+10. Click Authorize
+11. The page will eventually send you to an invalid page. This is normal. Copy the URL into a notepad, delete everything from the beginning of the url until after code=
+12. Take the remaining text and copy it for the FordPass Plugin config's "code" property.
+
 ## Things to try
+
 - "Hey siri, turn on my car."
 - "Hey siri, is the mustang locked?"
 - "Hey siri, lock the raptor."
 - "Hey siri, what is the fuel level of my fusion?"
 
 ## Donate to Support homebridge-fordpass
+
 This plugin was made with you in mind. If you would like to show your appreciation for its continued development, please consider [sponsoring me on Github](https://github.com/sponsors/Brandawg93).
 
 <sub><sup>**Disclaimer:** This plugin and its contributers are not affiliated with Ford Motor Company in any way.</sub></sup>
