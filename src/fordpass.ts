@@ -155,11 +155,14 @@ export class Vehicle extends EventEmitter {
   }
 
   async retrieveVehicleInfo(): Promise<void> {
-    const result = await new Connection(this.config, this.log, this.api).getVehicleInformation(this.vehicleId);
+    const conn = new Connection(this.config, this.log, this.api);
+    const result = await conn.getVehicleInformation(this.vehicleId);
     if (result) {
       this.info = result as VehicleInfo;
       this.vehicleId = result.vehicleId;
       this.name = result.nickName;
+    } else {
+      this.log.error('Failed to retrieve vehicle information.  Will try again in a bit.');
     }
     return;
   }
