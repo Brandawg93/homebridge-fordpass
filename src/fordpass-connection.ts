@@ -70,6 +70,18 @@ export class Connection {
           vehicles.push({ ...info, ...result.data.vehicles[0] });
         }
         return vehicles;
+      } else {
+        if (result.status === 401) {
+          this.log.error('Need to re-issue Login Authorization due to 401 error');
+          this.credentials.access_token = '';
+          this.credentials.refresh_token = '';
+          const storagePath = this.api.user.storagePath();
+          const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
+          if (fs.existsSync(credentialsPath)) {
+            fs.unlinkSync(credentialsPath);
+          }
+          return [] as Array<VehicleConfig>;
+        }
       }
       return [];
     } catch (error: any) {
@@ -94,33 +106,33 @@ export class Connection {
     if (!this.credentials.access_token) {
       await this.auth();
     }
-
     const url = baseApiUrl + vehicleInformationUrl.replace('{vehicleId}', vehicleId);
-    const options: AxiosRequestConfig = {
-      method: 'GET',
-      url: url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Application-Id': this.config.application_id,
-        Authorization: `Bearer ${this.credentials.access_token}`,
-      },
-    };
-
+    let result;
     try {
-      const result = await axios.request(options);
+      const options: AxiosRequestConfig = {
+        method: 'GET',
+        url: url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Application-Id': this.config.application_id,
+          Authorization: `Bearer ${this.credentials.access_token}`,
+        },
+      };
+
+      result = await axios.request(options);
       if (result.status < 300 && result.data) {
         if (result.data.status === 'SUCCESS') {
           return result.data.vehicle as VehicleInfo;
         }
 
-        return {} as VehicleInfo;
+        return null as unknown as VehicleInfo;
       } else {
         this.log.error(`Vehicle info failed with status: ${result.status}`);
       }
-      return {} as VehicleInfo;
+      return null as unknown as VehicleInfo;
     } catch (error: any) {
       this.log.error(`Vehicle info failed with error: ${error.code || error.response.status}`);
-      return {} as VehicleInfo;
+      return null as unknown as VehicleInfo;
     }
   }
 
@@ -229,7 +241,9 @@ export class Connection {
         let commandStatus = result.data.commandStatus;
         let tries = 10;
         while (commandStatus === 'QUEUED' && tries > 0) {
+          // eslint-disable-next-line no-await-in-loop
           await new Promise((resolve) => setTimeout(resolve, 5000));
+          // eslint-disable-next-line no-await-in-loop
           const refreshResult = await axios(options);
           commandStatus = refreshResult.data.commandStatus;
           tries--;
@@ -237,6 +251,17 @@ export class Connection {
 
         return result.data;
       } else {
+        if (result.status === 401) {
+          this.log.error('Need to re-issue Login Authorization due to 401 error');
+          this.credentials.access_token = '';
+          this.credentials.refresh_token = '';
+          const storagePath = this.api.user.storagePath();
+          const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
+          if (fs.existsSync(credentialsPath)) {
+            fs.unlinkSync(credentialsPath);
+          }
+          return {};
+        }
         this.log.error(`Command failed with status: ${JSON.stringify(result)}`);
       }
       return {};
@@ -313,6 +338,18 @@ export class Connection {
         this.credentials.access_token = res.data.access_token;
         this.credentials.expires_in = res.data.expires_in;
         return this.getRefreshToken();
+      } else {
+        if (res.status > 400) {
+          this.log.error('Need to re-issue Login Authorization due to 401 error');
+          this.credentials.access_token = '';
+          this.credentials.refresh_token = '';
+          const storagePath = this.api.user.storagePath();
+          const credentialsPath = `${storagePath}/fordpass-security-credentials.json`;
+          if (fs.existsSync(credentialsPath)) {
+            fs.unlinkSync(credentialsPath);
+          }
+          return {};
+        }
       }
     } catch (error: any) {
       this.log.error(
@@ -357,7 +394,9 @@ export class Connection {
         data: data,
       };
       const res = await axios.request(options);
+      this.log.debug('Ford API Response code: ' + res.status);
       if (res.status === 200 && res.data.access_token) {
+        this.log.debug('Successfully refreshed token from FordPass API');
         this.credentials.access_token = res.data.access_token;
         this.credentials.refresh_token = res.data.refresh_token;
         this.credentials.expires_in = res.data.expires_in;
